@@ -350,7 +350,7 @@ const setGhToken = t => t ? localStorage.setItem(APP.LS_TOKEN,t) : localStorage.
 const ghConfigured = () => !!(ghToken() && APP.state?.sync?.repo);
 const ghUrl = () => `https://api.github.com/repos/${APP.state.sync.repo}/contents/${APP.state.sync.path||'data.json'}`;
 const ghHeaders = () => ({ 'Authorization':'Bearer '+ghToken(), 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' });
-const b64encode = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64encode = s => { const b=new TextEncoder().encode(s); let bin=''; for(let i=0;i<b.length;i+=0x8000) bin+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000)); return btoa(bin); };
 const b64decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,'')), c=>c.charCodeAt(0)));
 
 async function ghPull(silent=false){
