@@ -1015,7 +1015,7 @@ function renderBien(root,bien){
       </div>
       ${bien.statut==='compromis'?`<div class="hero-banner hb-amber mt">✍️ <div style="flex:1">Bien en compromis — les indicateurs patrimoine s'activeront à la signature.</div><button class="btn btn-sm btn-p" onclick="acterSignature('${bien.id}')">Acter la signature</button></div>`:''}
     </div>
-    <div class="tabs">${bienTabs(bien).map(t=>`<div class="tab ${curTab===t.id?'active':''}" onclick="setBienTab('${bien.id}','${t.id}')">${t.label}</div>`).join('')}</div>
+    <div class="tabs">${bienTabs(bien).map(t=>`<div class="tab ${curTab===t.id?'active':''}" onclick="setBienTab('${bien.id}','${t.id}')">${t.label}</div>`).join('')}<div class="tab" style="color:var(--teal);font-weight:700" onclick="showTabHelp('${bien.id}')">❓ Aide</div></div>
     <div id="bienTabContent"></div>
   </div>`;
   const c=document.getElementById('bienTabContent');
@@ -1609,7 +1609,7 @@ function renderBienValo(c,bien){
   const m2s=[...bien.valorisation.prixM2].sort((a,b)=>new Date(a.date)-new Date(b.date));
   c.innerHTML=`
     <div class="grid g3 mb">
-      <div class="card card-p"><div class="kpi-label">Estimation retenue <span class="tt"><span class="tt-i">i</span><span class="tt-c">Valeur saisie manuellement (MeilleursAgents, agent immo…). Utilisée dans tous les KPI.</span></span></div>
+      <div class="card card-p"><div class="kpi-label">Estimation retenue · ${esc(bien.label)} <span class="tt"><span class="tt-i">i</span><span class="tt-c">Valeur saisie manuellement (MeilleursAgents, agent immo…). Utilisée dans tous les KPI.</span></span></div>
         <div class="kpi-value num" style="color:var(--teal)">${fmtEUR(v.manuelle)}</div>
         <div class="kpi-sub">${bien.surface?fmtEUR(v.manuelle/bien.surface,0)+' /m²':''}</div></div>
       <div class="card card-p"><div class="kpi-label">Estimation marché (m²)</div>
@@ -1619,11 +1619,11 @@ function renderBienValo(c,bien){
         <div class="kpi-value num" style="color:${ecart>=0?'var(--green)':'var(--red)'}">${ecart>=0?'+':''}${fmtEUR(ecart)}</div>
         <div class="kpi-sub">${fmtPct(ecartPct)}</div></div>
     </div>
-    <div class="card card-p mb"><div class="sec-title">📈 Historique des estimations</div>
+    <div class="card card-p mb"><div class="sec-title">📈 Historique des estimations <small>${esc(bien.label)} uniquement — chaque bien a ses propres estimations</small></div>
       <div class="chart-box" style="height:200px"><canvas id="chValo"></canvas></div></div>
     <div class="grid g2">
       <div class="card card-p">
-        <div class="spread mb"><div class="sec-title" style="margin:0">📝 Estimations manuelles</div><button class="btn btn-sm" onclick="addValo('${bien.id}','manuelle')">＋</button></div>
+        <div class="spread mb"><div class="sec-title" style="margin:0">📝 Estimations manuelles — ${esc(bien.label)}</div><button class="btn btn-sm" onclick="addValo('${bien.id}','manuelle')">＋</button></div>
         <table class="tbl"><thead><tr><th>Date</th><th class="tr-right">Valeur</th><th>Source</th><th></th></tr></thead><tbody>
         ${man.map((x,i)=>`<tr>
           <td><input type="date" value="${x.date}" onchange="updValo('${bien.id}','manuelle',${i},'date',this.value)"></td>
@@ -1633,7 +1633,7 @@ function renderBienValo(c,bien){
         </tbody></table>
       </div>
       <div class="card card-p">
-        <div class="spread mb"><div class="sec-title" style="margin:0">📐 Prix m² du quartier</div><button class="btn btn-sm" onclick="addValo('${bien.id}','prixM2')">＋</button></div>
+        <div class="spread mb"><div class="sec-title" style="margin:0">📐 Prix m² du quartier — ${esc(bien.label)}</div><button class="btn btn-sm" onclick="addValo('${bien.id}','prixM2')">＋</button></div>
         <table class="tbl"><thead><tr><th>Date</th><th class="tr-right">€/m²</th><th class="tr-right">Valeur</th><th>Source</th><th></th></tr></thead><tbody>
         ${m2s.map((x,i)=>`<tr>
           <td><input type="date" value="${x.date}" onchange="updValo('${bien.id}','prixM2',${i},'date',this.value)"></td>
@@ -2341,6 +2341,89 @@ async function loadDocsFromRepo(){
 }
 
 // =====================================================================
+// AIDE CONTEXTUELLE PAR ONGLET
+// =====================================================================
+const HELP={
+ov:{t:"Vue d'ensemble du bien",b:`
+<p><b>🎯 À quoi ça sert.</b> C'est le tableau de bord du bien : tout y est <b>calculé automatiquement</b> à partir des autres onglets — rien à saisir ici.</p>
+<p><b>Les 4 indicateurs :</b></p>
+<p>• <b>Patrimoine net du bien</b> = valeur estimée (onglet Valorisation) − capital restant dû (onglet Crédits).<br>
+• <b>Coût total de possession</b> = tout l'argent sorti depuis l'acquisition : mensualités, assurances, travaux, meubles, charges.<br>
+• <b>Effort mensuel</b> = crédit + assurances du mois en cours.<br>
+• <b>Capital vs intérêts</b> = sur ce que tu as déjà payé, la part devenue patrimoine (capital) vs la part perdue (intérêts). La barre progresse avec le temps : c'est mécanique, au début d'un prêt on paie surtout des intérêts.</p>
+<p><b>👥 Qui a payé quoi</b> cumule les décaissements selon les quote-parts définies sur chaque prêt, assurance et ligne de dépense.</p>`},
+credits:{t:"Crédits & assurances",b:`
+<p><b>🎯 À quoi ça sert.</b> Suivre chaque prêt au centime : capital remboursé, restant dû, intérêts payés, échéances passées.</p>
+<p><b>✍️ Comment le remplir.</b> Les prêts sont déjà saisis depuis vos offres LCL. Le badge <b>« échéancier bancaire réel »</b> signifie que le tableau d'amortissement officiel de la banque est intégré ligne à ligne : les chiffres sont exacts, pas simulés. Bouton ✎ pour corriger un paramètre, « 📋 Tableau d'amortissement » pour voir les 240/288 échéances.</p>
+<p><b>⚠️ Cas particulier RP :</b> le prêt principal a eu un déblocage progressif (travaux) → les intérêts intercalaires payés avant le vrai démarrage sont comptés à part.</p>
+<p><b>Assurances :</b> saisies séparément car les cotisations sont réparties 50/50 entre vous deux, alors que les mensualités suivent la quote-part du bien (80/20 sur la RP, 50/50 sur Agen).</p>`},
+travaux:{t:"Travaux & meubles",b:`
+<p><b>🎯 À quoi ça sert.</b> Comparer ce que tu avais budgété à ce que tu as réellement payé, et savoir qui a payé quoi.</p>
+<p><b>✍️ 3 sous-onglets :</b></p>
+<p>• <b>Budget prévisionnel</b> : les postes estimés (démolition, placo, élec…). La colonne « Payé réel » se remplit toute seule via le rattachement.<br>
+• <b>Paiements réels</b> : chaque dépense, à la date réelle. La colonne <b>« Poste budget »</b> rattache la ligne à un poste du prévisionnel → c'est ce lien qui alimente les écarts. Montant négatif = recette (revente, remboursement).<br>
+• <b>Bilan</b> : écart global, ventilation par catégorie, part de chacun.</p>
+<p><b>💡 Réflexe :</b> une dépense = une ligne dans « Paiements réels » (via le bouton ＋ global, 10 secondes), puis rattache-la à son poste.</p>`},
+charges:{t:"Charges courantes",b:`
+<p><b>🎯 À quoi ça sert.</b> Historiser ce que coûte le bien au quotidien : électricité, eau, internet, taxe foncière, copropriété, assurance habitation.</p>
+<p><b>✍️ Comment le remplir.</b> Une ligne = un paiement réel, à sa date. Par défaut réparti 100 % Armand (modifiable ligne par ligne). Ces montants alimentent le « coût mensuel vrai » et le coût total de possession.</p>
+<p><b>💡 Astuce :</b> saisis au fil de l'eau via le bouton ＋ global. Pour la taxe foncière : l'avis arrive fin août, paiement mi-octobre (rappel déjà dans l'Agenda).</p>`},
+locatif:{t:"Locatif (LMNP)",b:`
+<p><b>🎯 À quoi ça sert.</b> Piloter la location du studio : rentabilité, occupation, encaissements.</p>
+<p><b>Les indicateurs :</b> <b>cash-flow</b> = loyer HC − mensualité crédit − charges annuelles ÷ 12 (ce qui reste dans ta poche chaque mois). <b>Rendement brut</b> = loyers annuels ÷ investissement total (prix + frais + travaux). À Agen, &gt; 10 % = excellent.</p>
+<p><b>✍️ Comment le remplir :</b></p>
+<p>• <b>Loyer HC</b> : hors charges — c'est LA base de tous les calculs fiscaux. Les charges récupérables (~30 €) se déclarent à part.<br>
+• <b>Charges annuelles</b> : TF, copro, PNO (obligatoire en copro, loi ALUR), GLI (facultative — Visale est une alternative gratuite), CFE, entretien.<br>
+• <b>Suivi d'occupation</b> : clique un mois pour changer son statut (loué/vacant/travaux/entrée/sortie).<br>
+• <b>Loyers encaissés</b> : chaque loyer reçu, à la date d'encaissement — c'est ce qui fera ta déclaration fiscale (recettes du 01/01 au 31/12).</p>
+<p><b>⚠️ Seuil CFE :</b> au-dessus de 5 000 € de loyers/an (417 €/mois), la CFE est due dès N+2. À 440 €/mois tu es au-dessus : c'est intégré aux calculs.</p>
+<p>🔗 <a href="https://www.service-public.fr/professionnels-entreprises/vosdroits/F32805" target="_blank">Fiche LMNP officielle — Service-Public</a> · <a href="https://www.visale.fr/" target="_blank">Visale</a></p>`},
+fiscal:{t:"Fiscalité LMNP",b:`
+<p><b>🎯 Le principe du LMNP.</b> Tes loyers meublés sont des <b>BIC</b> (bénéfices industriels et commerciaux), pas des revenus fonciers. Deux régimes possibles :</p>
+<p>• <b>Micro-BIC</b> : abattement forfaitaire de 50 %, zéro comptabilité, une case à remplir (2042-C-PRO). Simple mais tu ne déduis rien de réel.<br>
+• <b>Réel simplifié</b> : tu déduis les charges réelles + intérêts d'emprunt + <b>amortissements</b> (la dépréciation « fictive » du bâti sur 30 ans et du mobilier sur 7 ans). Résultat : impôt souvent nul pendant 8-12 ans. Contrepartie : liasse fiscale annuelle (2031 + 2033), en pratique via un expert-comptable ou un service en ligne (~200-400 €/an, déductibles).</p>
+<p><b>⚙️ Ce que l'app calcule.</b> Le comparateur estime la base imposable dans chaque régime avec la règle de l'<b>art. 39 C</b> : l'amortissement ne peut pas créer de déficit — l'excédent part en stock reportable sans limite. Le scénario revente donne un ordre de grandeur (LF 2025 : les amortissements déduits sont réintégrés à la plus-value).</p>
+<p><b>✍️ Tes obligations, dans l'ordre :</b> ① immatriculation INPI dans les 15 jours de la mise en location → SIRET ② option pour le réel ③ chaque année en mai : liasse 2031/2033 puis report sur la 2042-C-PRO ④ CFE : déclaration 1447-C avant le 31/12 de la 1ʳᵉ année. Toutes les dates sont dans l'Agenda, tous les formulaires dans le bloc « Ressources » ci-dessous.</p>
+<p><b>⚠️ Les montants sont des estimations</b> — fais valider la 1ʳᵉ liasse par un expert-comptable.</p>
+<p>🔗 <a href="https://www.impots.gouv.fr/professionnel/professionnels" target="_blank">impots.gouv — espace pro</a> · <a href="https://bofip.impots.gouv.fr/bofip/4509-PGP" target="_blank">BOFiP amortissements</a> · <a href="https://procedures.inpi.fr/" target="_blank">INPI</a></p>`},
+valo:{t:"Valorisation",b:`
+<p><b>🎯 À quoi ça sert.</b> Suivre ce que vaut CE bien (chaque bien a ses propres estimations, indépendantes des autres). C'est l'« estimation retenue » qui alimente le patrimoine net.</p>
+<p><b>✍️ Comment le remplir.</b> 1 à 2 fois par an :</p>
+<p>• <b>Estimation manuelle</b> : la valeur que TU retiens (estimation d'agence, MeilleursAgents…). Note toujours la source.<br>
+• <b>Prix m² du quartier</b> : le prix médian × la surface = vision « marché brut », pour comparaison.</p>
+<p><b>💡 La meilleure source :</b> DVF (données publiques des ventes réelles notariées) — lien en bas de l'onglet. Reste prudent : une estimation optimiste gonfle artificiellement ton patrimoine net.</p>`},
+docs:{t:"Documents",b:`
+<p><b>🎯 À quoi ça sert.</b> Le coffre du bien : actes, offres de prêt, diagnostics, PV d'AG… classés par catégorie, consultables en 1 clic (👁️).</p>
+<p><b>⚙️ Où sont-ils stockés ?</b> Dans le navigateur de CHAQUE appareil (pas dans la synchro, pour ne pas l'alourdir). Une archive complète existe dans votre repo GitHub privé : sur un nouvel appareil (ou pour Victoria), Réglages → <b>« 📥 Charger les documents du repo »</b> et tout arrive.</p>
+<p><b>✍️ Ajouter un document :</b> bouton 📤 (il restera local — dis-le à Claude pour l'archiver aussi sur GitHub). Les originaux restent sur OneDrive : le coffre est un classeur de consultation.</p>`}
+};
+function showTabHelp(bienId){
+  const tab=APP.state.ui['tab_'+bienId]||'ov';
+  const bien=bienById(bienId);
+  const hlp=HELP[tab]||HELP.ov;
+  genericModal(`<div class="spread mb"><h3 style="font-size:16px">❓ ${hlp.t} — ${esc(bien.label)}</h3>
+    <button class="btn btn-sm" onclick="closeModal()">✕</button></div>
+    <div style="font-size:13px;line-height:1.65;color:var(--txt)">${hlp.b}</div>`);
+}
+
+// =====================================================================
+// PROPOSITION AUTO DES DOCUMENTS (nouveau navigateur / Victoria)
+// =====================================================================
+async function offerDocsIfEmpty(){
+  try{
+    if(!ghConfigured()) return;
+    if((await dbGetAllDocs()).length) return;
+    const r=await fetch('https://api.github.com/repos/'+APP.state.sync.repo+'/contents/docs-import?ref='+(APP.state.sync.branch||'main'),{headers:ghHeaders()});
+    if(!r.ok) return;
+    if(!(await r.json()).some(x=>x.name.endsWith('.json'))) return;
+    const ok=await confirmModal({title:'📥 Vos documents sont disponibles',
+      body:'Le coffre de ce navigateur est vide, mais tous vos documents (actes, prêts, diagnostics…) sont archivés dans votre repo GitHub privé.<br><br>Les charger maintenant ? (~1 minute)',
+      okLabel:'Charger les documents'});
+    if(ok) loadDocsFromRepo();
+  }catch(e){ console.warn(e); }
+}
+
+// =====================================================================
 // INIT
 // =====================================================================
 document.addEventListener('DOMContentLoaded', async ()=>{
@@ -2354,7 +2437,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     }catch(e){}
   }
   renderAll();
-  ghSyncOnLoad();
+  ghSyncOnLoad().then(()=>offerDocsIfEmpty());
 });
 </script>
 </html>
