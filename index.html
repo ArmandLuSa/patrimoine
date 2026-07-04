@@ -999,6 +999,8 @@ function bienTabs(bien){
 }
 function renderBien(root,bien){
   const curTab=APP.state.ui['tab_'+bien.id]||'ov';
+  const travauxReel=(bien.travauxCompta||[]).reduce((a,t)=>a+t.montant,0);
+  const coutRevient=(bien.prixAchat||0)+(bien.fraisNotaire||0)+travauxReel;
   const infos=[bien.adresse, bien.surface?bien.surface+' m²':null, bien.lot?'Lot '+bien.lot:null, bien.dpe?'DPE '+bien.dpe:null,
     bien.statut==='detenu'?'acquis le '+fmtDate(bien.dateAcquisition):(bien.dateSignaturePrevue?'signature prévue le '+fmtDate(bien.dateSignaturePrevue):null)]
     .filter(Boolean).join(' · ');
@@ -1019,7 +1021,8 @@ function renderBien(root,bien){
         <div style="text-align:right">
           <div class="kpi-label">Prix d'achat</div>
           <div class="num" style="font-size:20px;font-weight:800">${fmtEUR(bien.prixAchat)}</div>
-          <div style="font-size:11.5px;color:var(--muted)">+ ${fmtEUR(bien.fraisNotaire)} de frais</div>
+          <div style="font-size:11.5px;color:var(--muted)">+ ${fmtEUR(bien.fraisNotaire)} de frais${travauxReel>0?' · + '+fmtEUR(travauxReel,0)+' de travaux réels':''}</div>
+          ${travauxReel>0?`<div class="num" style="font-size:12.5px;margin-top:4px;font-weight:700;color:var(--teal)">= ${fmtEUR(coutRevient,0)} de coût de revient <span class="tt"><span class="tt-i">i</span><span class="tt-c">Prix d'achat + frais de notaire + total net des travaux et meubles réellement payés (onglet Travaux). Se met à jour automatiquement à chaque dépense saisie.</span></span></div>`:''}
           <button class="btn btn-sm mt" onclick="editBien('${bien.id}')">✎ Modifier la fiche</button>
         </div>
       </div>
