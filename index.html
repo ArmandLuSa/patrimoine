@@ -405,7 +405,7 @@ async function ghSyncOnLoad(){
     const remoteT = new Date(remote.updatedAt||0).getTime();
     const localT = new Date(APP.state.updatedAt||0).getTime();
     if(remoteT > localT){
-      APP.state = remote;
+      const keepSync=APP.state.sync; APP.state = remote; if(keepSync&&keepSync.repo) APP.state.sync=keepSync;
       localStorage.setItem(APP.LS_KEY, JSON.stringify(APP.state));
       toast('Données GitHub chargées (plus récentes) ✓');
       renderAll();
