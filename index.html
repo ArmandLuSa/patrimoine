@@ -1,0 +1,2283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patrimoine · Cockpit immobilier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --line:#e7e9ee; --line2:#f0f1f5;
+  --txt:#101828; --muted:#667085; --faint:#98a2b3;
+  --teal:#0f766e; --teal-soft:#e6f4f2; --teal-dark:#0b5a54;
+  --blue:#2563eb; --blue-soft:#eaf0fe;
+  --violet:#7c3aed; --violet-soft:#f2ecfd;
+  --amber:#b45309; --amber-soft:#fdf3e4;
+  --red:#b42318; --red-soft:#fbeceb;
+  --green:#067647; --green-soft:#e7f5ee;
+  --shadow:0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+  --shadow-lg:0 10px 30px rgba(16,24,40,.12);
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg)}
+body{font-family:'Inter',-apple-system,system-ui,sans-serif;color:var(--txt);font-size:14px;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+h1,h2,h3,h4{margin:0}
+a{color:var(--teal)}
+button{font-family:inherit}
+
+/* ===== Layout ===== */
+.app{display:flex;min-height:100vh}
+.sidebar{width:236px;background:var(--card);border-right:1px solid var(--line);position:fixed;top:0;bottom:0;left:0;display:flex;flex-direction:column;z-index:40}
+.main{flex:1;margin-left:236px;padding:28px 32px 60px;max-width:1240px}
+.logo{display:flex;align-items:center;gap:10px;padding:20px 18px 14px}
+.logo-ic{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--teal),#14b8a6);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+.logo b{font-size:15px;display:block;line-height:1.1}
+.logo span{font-size:11px;color:var(--muted)}
+.nav{padding:8px 12px;flex:1;overflow-y:auto}
+.nav-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);padding:14px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .12s;border:1px solid transparent;margin-bottom:2px}
+.nav-item:hover{background:var(--bg);color:var(--txt)}
+.nav-item.active{background:var(--teal-soft);color:var(--teal-dark);font-weight:600}
+.nav-item .badge{margin-left:auto}
+.sidebar-foot{padding:12px;border-top:1px solid var(--line)}
+.sync-pill{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);padding:8px 10px;border-radius:9px;background:var(--bg);cursor:pointer}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex-shrink:0}
+.sync-dot.ok{background:#12b76a}.sync-dot.warn{background:#f79009}.sync-dot.err{background:#f04438}
+
+.topbar{display:none}
+@media(max-width:920px){
+  .sidebar{display:none}
+  .main{margin-left:0;padding:16px 14px 60px}
+  .topbar{display:flex;position:sticky;top:0;z-index:40;background:var(--card);border-bottom:1px solid var(--line);padding:10px 14px;gap:10px;align-items:center;overflow-x:auto}
+  .topbar .nav-item{white-space:nowrap;padding:7px 12px}
+}
+
+/* ===== Cards / KPI ===== */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.card-p{padding:20px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.g4,.g3,.g2{grid-template-columns:1fr}}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;gap:5px}
+.kpi-value{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+.sec-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.sec-title small{font-weight:500;color:var(--muted);font-size:12px}
+
+/* ===== Badges / pills ===== */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px}
+.b-teal{background:var(--teal-soft);color:var(--teal-dark)}
+.b-blue{background:var(--blue-soft);color:var(--blue)}
+.b-violet{background:var(--violet-soft);color:var(--violet)}
+.b-amber{background:var(--amber-soft);color:var(--amber)}
+.b-red{background:var(--red-soft);color:var(--red)}
+.b-green{background:var(--green-soft);color:var(--green)}
+.b-grey{background:var(--line2);color:var(--muted)}
+
+/* ===== Buttons ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--txt);transition:all .12s}
+.btn:hover{border-color:#cdd2dc;box-shadow:var(--shadow)}
+.btn:active{transform:scale(.98)}
+.btn-p{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-p:hover{background:var(--teal-dark);border-color:var(--teal-dark)}
+.btn-danger{color:var(--red);border-color:#f3c6c2}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:7px}
+.btn-icon{padding:5px 8px;font-size:12px;border-radius:7px}
+
+/* ===== Tabs ===== */
+.tabs{display:flex;gap:4px;background:var(--line2);padding:4px;border-radius:11px;width:fit-content;max-width:100%;overflow-x:auto;margin-bottom:18px}
+.tab{padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s}
+.tab:hover{color:var(--txt)}
+.tab.active{background:var(--card);color:var(--txt);box-shadow:var(--shadow)}
+
+/* ===== Forms ===== */
+input,select,textarea{background:var(--card);border:1px solid #d5d9e2;color:var(--txt);border-radius:8px;padding:7px 10px;font-size:13px;outline:none;font-family:inherit;transition:border-color .12s}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,118,110,.12)}
+input[type=number]{font-variant-numeric:tabular-nums}
+input[readonly]{background:var(--line2);color:var(--muted)}
+label.fl{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+
+/* ===== Tables ===== */
+table.tbl{width:100%;font-size:12.5px;border-collapse:collapse}
+table.tbl th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);background:#fafbfc;position:sticky;top:0}
+table.tbl td{padding:7px 8px;border-bottom:1px solid var(--line2);vertical-align:middle}
+table.tbl tr:hover td{background:#fafbfc}
+table.tbl input,table.tbl select{padding:4px 7px;font-size:12px;width:100%}
+table.tbl tfoot td{font-weight:700;background:#fafbfc;border-top:2px solid var(--line)}
+.tr-right{text-align:right}
+.scroll-wrap{overflow-x:auto;border-radius:var(--r)}
+
+/* ===== Progress ===== */
+.pbar{height:7px;background:var(--line2);border-radius:4px;overflow:hidden}
+.pfill{height:100%;background:var(--teal);border-radius:4px;transition:width .4s}
+.pfill.blue{background:var(--blue)}.pfill.violet{background:var(--violet)}.pfill.amber{background:#f79009}.pfill.red{background:#f04438}
+
+/* ===== Tooltip ===== */
+.tt{position:relative;display:inline-flex;cursor:help}
+.tt-i{width:14px;height:14px;border-radius:50%;background:var(--line2);color:var(--muted);font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.tt-c{visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#1d2939;color:#fff;padding:9px 12px;border-radius:9px;font-size:11.5px;font-weight:400;line-height:1.55;width:250px;z-index:60;transition:opacity .15s;pointer-events:none;box-shadow:var(--shadow-lg);text-transform:none;letter-spacing:0}
+.tt:hover .tt-c{visibility:visible;opacity:1}
+
+/* ===== Modal / toast ===== */
+.modal-ov{position:fixed;inset:0;background:rgba(16,24,40,.5);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.modal-ov.show{display:flex}
+.modal-box{background:var(--card);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);padding:22px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(90px);background:#1d2939;color:#fff;font-weight:500;font-size:13px;padding:11px 20px;border-radius:11px;z-index:1000;transition:transform .3s;box-shadow:var(--shadow-lg)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{background:var(--red)}
+
+/* ===== Divers ===== */
+.hero-banner{border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:12px;font-size:13px;font-weight:500}
+.hb-amber{background:var(--amber-soft);border:1px solid #f5dcb6;color:var(--amber)}
+.hb-teal{background:var(--teal-soft);border:1px solid #bfe3de;color:var(--teal-dark)}
+.chart-box{position:relative;width:100%}
+.heat{display:grid;grid-template-columns:repeat(12,1fr);gap:5px}
+.heat-cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;cursor:pointer;color:#fff;transition:transform .1s}
+.heat-cell:hover{transform:scale(1.1)}
+.doc-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fafbfc;border:1px solid var(--line2);border-radius:9px;font-size:12.5px;margin-bottom:6px}
+details.acc{border:1px solid var(--line);border-radius:var(--r);background:var(--card);padding:14px 16px;margin-bottom:10px}
+details.acc summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px}
+details.acc summary::-webkit-details-marker{display:none}
+details.acc .arr{transition:transform .2s;color:var(--faint);font-size:11px}
+details.acc[open] .arr{transform:rotate(90deg)}
+.empty{text-align:center;padding:34px 20px;color:var(--muted);font-size:13px}
+.empty .big{font-size:34px;margin-bottom:8px}
+.page{display:none}.page.active{display:block}
+.mt{margin-top:16px}.mb{margin-bottom:16px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.spread{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.agenda-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--line2);border-radius:11px;margin-bottom:8px;background:var(--card)}
+.agenda-date{width:52px;text-align:center;flex-shrink:0}
+.agenda-date .d{font-size:18px;font-weight:800;line-height:1}
+.agenda-date .m{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)}
+.legend-dot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar"></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-ic">◆</div>
+      <div><b>Patrimoine</b><span id="logoSub">Armand &amp; Victoria</span></div>
+    </div>
+    <nav class="nav" id="sideNav"></nav>
+    <div class="sidebar-foot">
+      <div class="row" style="margin-bottom:8px">
+        <button class="btn btn-sm" style="flex:1" onclick="openQuickAdd()">＋ Ajouter</button>
+      </div>
+      <div class="sync-pill" onclick="navTo('reglages')" id="syncPill">
+        <span class="sync-dot" id="syncDot"></span>
+        <span id="syncLabel">Sauvegarde locale</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div id="pages"></div>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<div id="modalConfirm" class="modal-ov">
+  <div class="modal-box">
+    <h3 style="font-size:16px;margin-bottom:8px" id="mcTitle"></h3>
+    <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px" id="mcBody"></div>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn" id="mcCancel">Annuler</button>
+      <button class="btn btn-p" id="mcOk">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalGeneric" class="modal-ov"><div class="modal-box" id="modalGenericBox"></div></div>
+
+</body>
+<script>
+// =====================================================================
+// PATRIMOINE v2 — cockpit immobilier Armand & Victoria
+// Données : localStorage (cache) + fichier data.json via GitHub (sync)
+// Documents : IndexedDB (local)
+// =====================================================================
+'use strict';
+
+const APP = {
+  LS_KEY: 'patrimoine_v2',
+  LS_TOKEN: 'patrimoine_gh_token',
+  DB_NAME: 'patrimoine_docs',
+  DB_STORE: 'documents',
+  state: null,
+  db: null,
+  ghSha: null,        // sha du data.json distant (pour update)
+  charts: {},         // instances Chart.js
+  dirty: false,
+  autoSyncTimer: null,
+};
+
+// ---------- Format ----------
+const fmtEUR = (n, dec=0) => (n===null||n===undefined||isNaN(n)) ? '—' :
+  n.toLocaleString('fr-FR',{minimumFractionDigits:dec,maximumFractionDigits:dec}) + ' €';
+const fmtPct = (n, dec=1) => (n===null||n===undefined||isNaN(n)) ? '—' :
+  n.toLocaleString('fr-FR',{minimumFractionDigits:dec,maximumFractionDigits:dec}) + ' %';
+const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+const MONTHS_FR = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+const monthLabel = ym => { if(!ym) return '—'; const [y,m]=ym.split('-'); return MONTHS_FR[+m-1]+' '+y; };
+const currentYM = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
+const ymToDate = ym => { const [y,m]=ym.split('-').map(Number); return new Date(y,m-1,1); };
+const dateToYM = d => { const x=new Date(d); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'); };
+const addMonths = (ym,n) => { const d=ymToDate(ym); d.setMonth(d.getMonth()+n); return dateToYM(d); };
+const monthsBetween = (ymA, ymB) => { const a=ymToDate(ymA), b=ymToDate(ymB); return (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth()); };
+const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const uid = p => (p||'id') + '_' + Date.now() + '_' + Math.floor(Math.random()*1e4);
+
+// ---------- Toast / modals ----------
+function toast(msg, type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+(type==='error'?'error ':'')+'show';
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600);
+}
+function confirmModal({title, body, okLabel='Confirmer'}){
+  return new Promise(res=>{
+    document.getElementById('mcTitle').textContent=title;
+    document.getElementById('mcBody').innerHTML=body;
+    document.getElementById('mcOk').textContent=okLabel;
+    const m=document.getElementById('modalConfirm'); m.classList.add('show');
+    const done=r=>{ m.classList.remove('show'); res(r); };
+    document.getElementById('mcOk').onclick=()=>done(true);
+    document.getElementById('mcCancel').onclick=()=>done(false);
+  });
+}
+function genericModal(html){
+  const m=document.getElementById('modalGeneric');
+  document.getElementById('modalGenericBox').innerHTML=html;
+  m.classList.add('show');
+}
+function closeModal(){ document.getElementById('modalGeneric').classList.remove('show'); }
+document.addEventListener('click', e=>{ if(e.target.classList?.contains('modal-ov')) e.target.classList.remove('show'); });
+
+// =====================================================================
+// IndexedDB — documents
+// =====================================================================
+function openDB(){
+  return new Promise((res,rej)=>{
+    const rq=indexedDB.open(APP.DB_NAME,1);
+    rq.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(APP.DB_STORE)){
+        const st=db.createObjectStore(APP.DB_STORE,{keyPath:'id',autoIncrement:true});
+        st.createIndex('bienId','bienId',{unique:false});
+      }
+    };
+    rq.onsuccess=e=>{APP.db=e.target.result;res(APP.db);};
+    rq.onerror=rej;
+  });
+}
+const dbTx = mode => APP.db.transaction(APP.DB_STORE,mode).objectStore(APP.DB_STORE);
+const dbAddDoc = doc => new Promise((res,rej)=>{const r=dbTx('readwrite').add(doc);r.onsuccess=()=>res(r.result);r.onerror=rej;});
+const dbGetAllDocs = () => new Promise((res,rej)=>{const r=dbTx('readonly').getAll();r.onsuccess=()=>res(r.result);r.onerror=rej;});
+const dbGetDoc = id => new Promise((res,rej)=>{const r=dbTx('readonly').get(id);r.onsuccess=()=>res(r.result);r.onerror=rej;});
+const dbDelDoc = id => new Promise((res,rej)=>{const r=dbTx('readwrite').delete(id);r.onsuccess=()=>res();r.onerror=rej;});
+const dbPutDoc = doc => new Promise((res,rej)=>{const r=dbTx('readwrite').put(doc);r.onsuccess=()=>res();r.onerror=rej;});
+
+// =====================================================================
+// State — défaut (vide : les données arrivent via data.json / import)
+// =====================================================================
+function defaultState(){
+  return {
+    version: 2,
+    updatedAt: new Date().toISOString(),
+    couple: {
+      p1: { id:'armand', nom:'Personne 1', couleur:'#2563eb' },
+      p2: { id:'victoria', nom:'Personne 2', couleur:'#7c3aed' }
+    },
+    biens: [],
+    agenda: [],
+    coffreCats: {},
+    sync: { repo:'', branch:'main', path:'data.json', auto:false },
+    ui: { page:'dashboard', period: currentYM() }
+  };
+}
+
+function saveLocal(){
+  APP.state.updatedAt = new Date().toISOString();
+  try{ localStorage.setItem(APP.LS_KEY, JSON.stringify(APP.state)); }
+  catch(e){ toast('Erreur sauvegarde locale','error'); }
+  markDirty();
+}
+function markDirty(){
+  APP.dirty = true;
+  refreshSyncPill();
+  if(APP.state.sync?.auto && ghToken() && APP.state.sync.repo){
+    clearTimeout(APP.autoSyncTimer);
+    APP.autoSyncTimer = setTimeout(()=>ghPush(true), 4000);
+  }
+}
+function loadLocal(){
+  try{
+    const raw=localStorage.getItem(APP.LS_KEY);
+    if(raw){ APP.state=migrate(JSON.parse(raw)); return true; }
+  }catch(e){ console.error(e); }
+  APP.state=defaultState();
+  return false;
+}
+function migrate(s){
+  if(!s.ui) s.ui={page:'dashboard',period:currentYM()};
+  if(!s.sync) s.sync={repo:'',branch:'main',path:'data.json',auto:false};
+  if(!s.agenda) s.agenda=[];
+  if(!s.coffreCats) s.coffreCats={};
+  if(!Array.isArray(s.biens)) s.biens=[];
+  return s;
+}
+const bienById = id => APP.state.biens.find(b=>b.id===id);
+const P1 = () => APP.state.couple.p1;
+const P2 = () => APP.state.couple.p2;
+
+// =====================================================================
+// GitHub sync — data.json dans un repo privé
+// Token : stocké UNIQUEMENT en localStorage (jamais dans data.json)
+// =====================================================================
+const ghToken = () => localStorage.getItem(APP.LS_TOKEN) || '';
+const setGhToken = t => t ? localStorage.setItem(APP.LS_TOKEN,t) : localStorage.removeItem(APP.LS_TOKEN);
+const ghConfigured = () => !!(ghToken() && APP.state?.sync?.repo);
+const ghUrl = () => `https://api.github.com/repos/${APP.state.sync.repo}/contents/${APP.state.sync.path||'data.json'}`;
+const ghHeaders = () => ({ 'Authorization':'Bearer '+ghToken(), 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' });
+const b64encode = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,'')), c=>c.charCodeAt(0)));
+
+async function ghPull(silent=false){
+  if(!ghConfigured()){ if(!silent) toast('Configure GitHub dans Réglages','error'); return null; }
+  try{
+    const r = await fetch(ghUrl()+'?ref='+(APP.state.sync.branch||'main'), {headers: ghHeaders()});
+    if(r.status===404){ if(!silent) toast('data.json introuvable dans le repo — fais un premier Push','error'); return null; }
+    if(!r.ok) throw new Error('GitHub '+r.status);
+    const j = await r.json();
+    APP.ghSha = j.sha;
+    const remote = migrate(JSON.parse(b64decode(j.content)));
+    return remote;
+  }catch(e){
+    console.error(e);
+    if(!silent) toast('Erreur GitHub : '+e.message,'error');
+    return null;
+  }
+}
+async function ghPush(silent=false){
+  if(!ghConfigured()){ if(!silent) toast('Configure GitHub dans Réglages','error'); return false; }
+  try{
+    if(!APP.ghSha){
+      const r0 = await fetch(ghUrl()+'?ref='+(APP.state.sync.branch||'main'), {headers: ghHeaders()});
+      if(r0.ok){ APP.ghSha=(await r0.json()).sha; }
+    }
+    const body = {
+      message: 'Patrimoine · sauvegarde du '+new Date().toLocaleString('fr-FR'),
+      content: b64encode(JSON.stringify(APP.state,null,1)),
+      branch: APP.state.sync.branch||'main'
+    };
+    if(APP.ghSha) body.sha = APP.ghSha;
+    const r = await fetch(ghUrl(), {method:'PUT',headers:{...ghHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){ const t=await r.text(); throw new Error(r.status+' '+t.slice(0,120)); }
+    const j = await r.json();
+    APP.ghSha = j.content.sha;
+    APP.dirty = false;
+    refreshSyncPill();
+    if(!silent) toast('Sauvegardé sur GitHub ✓');
+    return true;
+  }catch(e){
+    console.error(e);
+    if(!silent) toast('Erreur push GitHub : '+e.message,'error');
+    refreshSyncPill('err');
+    return false;
+  }
+}
+async function ghSyncOnLoad(){
+  if(!ghConfigured()) return;
+  refreshSyncPill('sync');
+  const remote = await ghPull(true);
+  if(remote){
+    const remoteT = new Date(remote.updatedAt||0).getTime();
+    const localT = new Date(APP.state.updatedAt||0).getTime();
+    if(remoteT > localT){
+      APP.state = remote;
+      localStorage.setItem(APP.LS_KEY, JSON.stringify(APP.state));
+      toast('Données GitHub chargées (plus récentes) ✓');
+      renderAll();
+    }else if(localT > remoteT){
+      toast('Données locales plus récentes — pense à Push (Réglages)');
+    }
+    APP.dirty = localT > remoteT;
+  }
+  refreshSyncPill();
+}
+function refreshSyncPill(force){
+  const dot=document.getElementById('syncDot'), lab=document.getElementById('syncLabel');
+  if(!dot) return;
+  if(force==='err'){ dot.className='sync-dot err'; lab.textContent='Erreur de sync'; return; }
+  if(force==='sync'){ dot.className='sync-dot warn'; lab.textContent='Synchronisation…'; return; }
+  if(!ghConfigured()){ dot.className='sync-dot'; lab.textContent='Local uniquement'; return; }
+  if(APP.dirty){ dot.className='sync-dot warn'; lab.textContent='Modifs non pushées'; }
+  else{ dot.className='sync-dot ok'; lab.textContent='Sync GitHub ✓'; }
+}
+
+// =====================================================================
+// Export / import complet (données + documents)
+// =====================================================================
+async function exportFull(){
+  toast('Préparation de l\'export…');
+  const docs = await dbGetAllDocs();
+  const ser = docs.map(d=>{
+    const bytes=new Uint8Array(d.data); let bin='';
+    for(let i=0;i<bytes.length;i+=0x8000) bin+=String.fromCharCode(...bytes.subarray(i,i+0x8000));
+    return {...d, data:undefined, dataB64:btoa(bin)};
+  });
+  const payload={version:2, exportedAt:new Date().toISOString(), state:APP.state, documents:ser};
+  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='patrimoine-export-complet-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Export téléchargé ✓');
+}
+async function importFile(file){
+  try{
+    const j=JSON.parse(await file.text());
+    // data.json seul (state) ou export complet {state, documents}
+    const st = j.state && j.version!==undefined && j.documents!==undefined ? j.state : (j.biens!==undefined ? j : j.state);
+    if(!st || st.biens===undefined){ toast('Format non reconnu','error'); return; }
+    const ok=await confirmModal({title:'Importer ces données ?',
+      body:'Les données actuelles de l\'application seront <b>remplacées</b>. '+(j.documents?j.documents.length+' document(s) seront aussi restaurés.':'')});
+    if(!ok) return;
+    APP.state=migrate(st);
+    saveLocal();
+    if(j.documents){
+      const all=await dbGetAllDocs();
+      for(const d of all) await dbDelDoc(d.id);
+      for(const d of j.documents){
+        const bin=atob(d.dataB64); const bytes=new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+        await dbAddDoc({bienId:d.bienId,categorieId:d.categorieId,filename:d.filename,mimeType:d.mimeType,size:d.size,data:bytes.buffer,uploadedAt:d.uploadedAt});
+      }
+    }
+    toast('Import réussi ✓');
+    renderAll();
+  }catch(e){ console.error(e); toast('Erreur import : '+e.message,'error'); }
+}
+// =====================================================================
+// MOTEUR DE CALCUL
+// =====================================================================
+
+/**
+ * Échéancier d'un prêt : réel (banque) si pret.tableauReel, sinon simulé.
+ * Retourne [{n, amort, int, ass, ech, crd}] — n=1 correspond au mois de dateDebutAmortissement.
+ */
+function pretSchedule(pret){
+  if(pret._schedCache) return pret._schedCache;
+  let rows;
+  if(pret.tableauReel && pret.tableauReel.length){
+    rows = pret.tableauReel.map(r=>({n:r[0],amort:r[1],int:r[2],ass:r[3],ech:r[4],crd:r[5]}));
+  }else{
+    rows=[];
+    const taux=pret.taux/100/12, mens=pret.mensualiteCapInteret;
+    let crd=pret.montant;
+    for(let i=1;i<=pret.dureeMois && crd>0.01;i++){
+      const it=crd*taux;
+      let cap=Math.min(Math.max(mens-it,0),crd);
+      crd-=cap;
+      rows.push({n:i,amort:cap,int:it,ass:(pret.mensualiteAvecAssurance||mens)-mens,ech:cap+it+((pret.mensualiteAvecAssurance||mens)-mens),crd});
+    }
+  }
+  pret._schedCache=rows;
+  return rows;
+}
+
+/** État du prêt à une période ym (fin de mois) */
+function calcPretAtDate(pret, ym){
+  const sched=pretSchedule(pret);
+  const start=dateToYM(pret.dateDebutAmortissement||pret.premiereEcheance||pret.dateDepart);
+  const k=Math.max(0, Math.min(sched.length, monthsBetween(start,ym)+1)); // nb échéances passées
+  let capR=0, intR=pret.interetsIntercalaires||0, assR=0;
+  for(let i=0;i<k;i++){ capR+=sched[i].amort; intR+=sched[i].int; assR+=sched[i].ass; }
+  const cur=k>0?sched[k-1]:null;
+  return {
+    capitalRestant: k>0 ? sched[k-1].crd : pret.montant,
+    capitalRembourseCumul: capR,
+    interetsPayesCumul: intR,
+    assuranceIncluseCumul: assR,
+    mensCapitalMois: cur?cur.amort:0,
+    mensInteretsMois: cur?cur.int:0,
+    mensTotaleMois: (k>0 && k<=sched.length) ? cur.amort+cur.int : 0,
+    moisEcoules: k,
+    dureeTot: sched.length,
+    actif: k>0 && k<sched.length
+  };
+}
+
+/** Valorisation la plus récente <= ym */
+function getValoAt(bien, ym, mode='manuelle'){
+  const arr=bien.valorisation?.[mode]; if(!arr||!arr.length) return null;
+  const cible=ymToDate(ym).getTime();
+  const sorted=[...arr].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  let best=sorted[0];
+  for(const v of sorted) if(new Date(v.date).getTime()<=cible+2678400000) best=v;
+  return best;
+}
+function bienValeur(bien, ym){
+  const man=getValoAt(bien,ym,'manuelle');
+  const m2=getValoAt(bien,ym,'prixM2');
+  const vMan=man?.valeur ?? bien.prixAchat ?? 0;
+  const vM2=m2 ? m2.valeur*(bien.surface||0) : (bien.prixAchat??0);
+  return {manuelle:vMan, m2:vM2, retenue:vMan};
+}
+
+/** Cotisations d'assurance externes (hors échéance) d'un bien pour un mois où le prêt est actif */
+function bienAssurancesMois(bien){
+  return (bien.assurances||[]).reduce((a,x)=>a+(x.cotMensuelle||0),0);
+}
+
+/** Flux d'un mois pour un bien (sorties, et loyers en entrée si LMNP loué) */
+function calcFluxMois(bien, ym){
+  const out={mensualites:0,assurances:0,charges:0,travaux:0,loyers:0,total:0,parP:{[P1().id]:0,[P2().id]:0}};
+  if(bien.statut!=='detenu') return out;
+  const add=(montant,pa,pv)=>{ out.parP[P1().id]+=montant*(pa/100); out.parP[P2().id]+=montant*(pv/100); };
+  for(const pret of bien.prets||[]){
+    const st=calcPretAtDate(pret,ym);
+    if(st.mensTotaleMois>0){ out.mensualites+=st.mensTotaleMois; add(st.mensTotaleMois,pret.partArmand,pret.partVictoria); }
+  }
+  for(const ass of bien.assurances||[]){
+    const pret=(bien.prets||[]).find(p=>p.id===ass.pretId);
+    if(pret){ const st=calcPretAtDate(pret,ym); if(st.moisEcoules===0||st.moisEcoules>=st.dureeTot) continue; }
+    out.assurances+=ass.cotMensuelle||0; add(ass.cotMensuelle||0, ass.partArmand??50, ass.partVictoria??50);
+  }
+  for(const c of bien.chargesRecurrentes||[]) if(dateToYM(c.date)===ym){
+    out.charges+=c.montant; add(c.montant, c.partArmand??100, c.partVictoria??0);
+  }
+  for(const t of bien.travauxCompta||[]) if(dateToYM(t.date)===ym){
+    out.travaux+=t.montant; add(t.montant, t.partArmand??bien.quoteParts.armand, t.partVictoria??bien.quoteParts.victoria);
+  }
+  if(bien.locatif){
+    for(const l of bien.locatif.loyers||[]) if(dateToYM(l.date)===ym) out.loyers+=l.montant;
+  }
+  out.total=out.mensualites+out.assurances+out.charges+out.travaux;
+  return out;
+}
+
+/** Cumuls depuis l'origine jusqu'à ym pour un bien */
+function calcCumul(bien, ym){
+  const r={capitalRembourse:0,interetsPayes:0,assurancesCumul:0,chargesCumul:0,travauxCumul:0,loyersCumul:0,
+           capitalRestantTotal:0,fraisCredit:0,parP:{[P1().id]:0,[P2().id]:0}};
+  if(bien.statut!=='detenu') return r;
+  const endOfYm=new Date(ymToDate(ym).getFullYear(), ymToDate(ym).getMonth()+1, 0);
+  const add=(m,pa,pv)=>{ r.parP[P1().id]+=m*(pa/100); r.parP[P2().id]+=m*(pv/100); };
+  for(const pret of bien.prets||[]){
+    const st=calcPretAtDate(pret,ym);
+    r.capitalRembourse+=st.capitalRembourseCumul;
+    r.interetsPayes+=st.interetsPayesCumul;
+    r.capitalRestantTotal+=st.capitalRestant;
+    r.fraisCredit+=(pret.fraisDossier||0)+(pret.caution||0);
+    add(st.capitalRembourseCumul+st.interetsPayesCumul+(pret.interetsIntercalaires?0:0), pret.partArmand, pret.partVictoria);
+  }
+  for(const ass of bien.assurances||[]){
+    const pret=(bien.prets||[]).find(p=>p.id===ass.pretId); if(!pret) continue;
+    const st=calcPretAtDate(pret,ym);
+    const tot=(ass.cotMensuelle||0)*st.moisEcoules;
+    r.assurancesCumul+=tot; add(tot, ass.partArmand??50, ass.partVictoria??50);
+  }
+  for(const c of bien.chargesRecurrentes||[]) if(new Date(c.date)<=endOfYm){
+    r.chargesCumul+=c.montant; add(c.montant, c.partArmand??100, c.partVictoria??0);
+  }
+  for(const t of bien.travauxCompta||[]) if(new Date(t.date)<=endOfYm){
+    r.travauxCumul+=t.montant; add(t.montant, t.partArmand??bien.quoteParts.armand, t.partVictoria??bien.quoteParts.victoria);
+  }
+  if(bien.locatif) for(const l of bien.locatif.loyers||[]) if(new Date(l.date)<=endOfYm) r.loyersCumul+=l.montant;
+  r.coutTotalPossession=r.capitalRembourse+r.interetsPayes+r.assurancesCumul+r.chargesCumul+r.travauxCumul;
+  r.investiCumul=r.capitalRembourse+r.travauxCumul+r.chargesCumul;
+  return r;
+}
+
+/** Patrimoine global à ym */
+function calcGlobal(ym){
+  const g={valeur:0,dette:0,net:0,parP:{[P1().id]:0,[P2().id]:0},parBien:[]};
+  for(const bien of APP.state.biens){
+    if(bien.statut!=='detenu'){ g.parBien.push({bien,valeur:0,net:0}); continue; }
+    const v=bienValeur(bien,ym).retenue;
+    const cum=calcCumul(bien,ym);
+    g.valeur+=v; g.dette+=cum.capitalRestantTotal;
+    let netP1=v*(bien.quoteParts.armand/100), netP2=v*(bien.quoteParts.victoria/100);
+    for(const pret of bien.prets||[]){
+      const st=calcPretAtDate(pret,ym);
+      netP1-=st.capitalRestant*(pret.partArmand/100);
+      netP2-=st.capitalRestant*(pret.partVictoria/100);
+    }
+    g.parP[P1().id]+=netP1; g.parP[P2().id]+=netP2;
+    g.parBien.push({bien,valeur:v,net:v-cum.capitalRestantTotal});
+  }
+  g.net=g.valeur-g.dette;
+  return g;
+}
+
+// ---------- LMNP ----------
+function lmnpInvestTotal(bien){
+  return (bien.prixAchat||0)+(bien.fraisNotaire||0)+(bien.fraisAutres||0)
+    +(bien.travauxCompta||[]).reduce((a,t)=>a+Math.max(0,t.montant),0);
+}
+function lmnpChargesAnnuelles(bien){
+  const ch=bien.locatif?.chargesAnnuelles||{};
+  let tot=0;
+  for(const [k,v] of Object.entries(ch)){
+    if(k==='cfe' && (bien.locatif.loyerHC||0)*12<=5000) continue;
+    tot+=v||0;
+  }
+  return tot;
+}
+function lmnpCashflow(bien){
+  const loyer=bien.locatif?.loyerHC||0;
+  let mens=0;
+  for(const pret of bien.prets||[]) mens+=(pret.mensualiteAvecAssurance||pret.mensualiteCapInteret||0);
+  const chM=lmnpChargesAnnuelles(bien)/12;
+  return {loyer, mens, chargesMois:chM, cfMois:loyer-mens-chM, cfAn:(loyer-mens-chM)*12};
+}
+function lmnpAmortAnnuel(bien, annee=1){
+  const a=bien.locatif?.amort||{};
+  const bati=(a.bati&&a.durb)?a.bati/a.durb:0;
+  const mob=(a.mob&&a.durm&&annee<=a.durm)?a.mob/a.durm:0;
+  return {bati,mob,total:bati+mob};
+}
+/** Comparateur fiscal année pleine (approximation année 1) */
+function lmnpFiscal(bien){
+  const loyerAn=(bien.locatif?.loyerHC||0)*12;
+  const charges=lmnpChargesAnnuelles(bien);
+  let interetsAn=0;
+  for(const pret of bien.prets||[]){
+    const sched=pretSchedule(pret);
+    interetsAn+=sched.slice(0,12).reduce((x,r)=>x+r.int,0);
+    interetsAn+=sched.slice(0,12).reduce((x,r)=>x+r.ass,0);
+  }
+  const am=lmnpAmortAnnuel(bien,1);
+  const baseMicro=loyerAn*0.5;
+  const resReelAvantAm=loyerAn-charges-interetsAn;
+  const amortUtilisable=Math.max(0,Math.min(am.total, resReelAvantAm)); // art. 39C : pas de déficit par amortissement
+  const baseReel=Math.max(0, resReelAvantAm-amortUtilisable);
+  const amortDiffere=am.total-amortUtilisable;
+  return {loyerAn,charges,interetsAn,amort:am,baseMicro,baseReel,resReelAvantAm,amortDiffere,
+          eco:(baseMicro-baseReel)};
+}
+
+// ---------- Projection patrimoine (par année) ----------
+function projectionData(){
+  const start=currentYM();
+  const pts=[];
+  let maxMonths=12;
+  for(const b of APP.state.biens) for(const p of b.prets||[]){
+    const st=calcPretAtDate(p,start);
+    const sched=pretSchedule(p);
+    const startYm=dateToYM(p.dateDebutAmortissement||p.premiereEcheance||p.dateDepart);
+    const remaining=sched.length-monthsBetween(startYm,start);
+    maxMonths=Math.max(maxMonths,remaining);
+  }
+  maxMonths=Math.min(maxMonths,360);
+  for(let m=0;m<=maxMonths;m+=12){
+    const ym=addMonths(start,m);
+    let valeur=0,dette=0;
+    for(const bien of APP.state.biens){
+      if(bien.statut!=='detenu') continue;
+      valeur+=bienValeur(bien,ym).retenue;
+      for(const pret of bien.prets||[]) dette+=calcPretAtDate(pret,ym).capitalRestant;
+    }
+    pts.push({label:ymToDate(ym).getFullYear(),valeur,dette,net:valeur-dette});
+  }
+  return pts;
+}
+
+function invalidateCaches(){
+  for(const b of APP.state.biens) for(const p of b.prets||[]) delete p._schedCache;
+}
+// =====================================================================
+// NAVIGATION & SHELL
+// =====================================================================
+const BIEN_ICONS={RP:'🏡',LMNP:'🏢',AUTRE:'🏠'};
+const STATUT_BADGE={detenu:'<span class="badge b-green">Détenu</span>',compromis:'<span class="badge b-amber">Compromis</span>',vendu:'<span class="badge b-grey">Vendu</span>'};
+
+function navItems(){
+  const items=[{id:'dashboard',icon:'📊',label:'Vue globale'}];
+  for(const b of APP.state.biens) items.push({id:'bien:'+b.id,icon:BIEN_ICONS[b.type]||'🏠',label:b.label,statut:b.statut});
+  items.push({id:'agenda',icon:'🗓️',label:'Agenda',count:agendaAVenir(30).length});
+  items.push({id:'coffre',icon:'📁',label:'Coffre'});
+  items.push({id:'reglages',icon:'⚙️',label:'Réglages'});
+  return items;
+}
+function renderNav(){
+  const cur=APP.state.ui.page;
+  const html=items=>items.map(it=>`
+    <div class="nav-item ${cur===it.id?'active':''}" onclick="navTo('${it.id}')">
+      <span>${it.icon}</span><span>${esc(it.label)}</span>
+      ${it.statut==='compromis'?'<span class="badge b-amber">⏳</span>':''}
+      ${it.count?'<span class="badge b-teal">'+it.count+'</span>':''}
+    </div>`).join('');
+  const its=navItems();
+  document.getElementById('sideNav').innerHTML=
+    `<div class="nav-sec">Pilotage</div>`+html(its.filter(i=>i.id==='dashboard'))+
+    `<div class="nav-sec">Biens</div>`+html(its.filter(i=>i.id.startsWith('bien:')))+
+    (APP.state.biens.length?'':'<div style="padding:4px 10px;font-size:12px;color:var(--faint)">Aucun bien</div>')+
+    `<div class="nav-item" onclick="addBienWizard()" style="color:var(--teal)"><span>＋</span><span>Ajouter un bien</span></div>`+
+    `<div class="nav-sec">Outils</div>`+html(its.filter(i=>['agenda','coffre','reglages'].includes(i.id)));
+  document.getElementById('topbar').innerHTML=html(its);
+  document.getElementById('logoSub').textContent=P1().nom.split(' ')[0]+' & '+P2().nom.split(' ')[0];
+}
+function navTo(page){
+  APP.state.ui.page=page;
+  localStorage.setItem(APP.LS_KEY, JSON.stringify(APP.state)); // sans toucher updatedAt
+  renderAll();
+  window.scrollTo({top:0});
+}
+function destroyCharts(){
+  for(const k of Object.keys(APP.charts)){ try{APP.charts[k].destroy();}catch(e){} delete APP.charts[k]; }
+}
+function renderAll(){
+  invalidateCaches();
+  destroyCharts();
+  renderNav();
+  refreshSyncPill();
+  const page=APP.state.ui.page;
+  const root=document.getElementById('pages');
+  if(page==='dashboard') renderDashboard(root);
+  else if(page.startsWith('bien:')){ const b=bienById(page.slice(5)); b?renderBien(root,b):renderDashboard(root); }
+  else if(page==='agenda') renderAgenda(root);
+  else if(page==='coffre') renderCoffre(root);
+  else if(page==='reglages') renderReglages(root);
+  else renderDashboard(root);
+}
+
+const CHART_OK = () => typeof Chart!=='undefined';
+const chartBase = {responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{family:'Inter',size:11},boxWidth:12,usePointStyle:true}}}};
+const eurTick = v => (Math.abs(v)>=1000? (v/1000).toLocaleString('fr-FR')+' k€' : v+' €');
+
+// =====================================================================
+// DASHBOARD
+// =====================================================================
+function renderDashboard(root){
+  const ym=APP.state.ui.period;
+  const g=calcGlobal(ym);
+  const p1=P1(),p2=P2();
+  const totP=g.parP[p1.id]+g.parP[p2.id];
+  const pct1=totP>0?g.parP[p1.id]/totP*100:0, pct2=totP>0?g.parP[p2.id]/totP*100:0;
+
+  // Flux consolidés du mois
+  let flux={mensualites:0,assurances:0,charges:0,travaux:0,loyers:0,total:0};
+  let cumul={capitalRembourse:0,interetsPayes:0,investiCumul:0,coutTotalPossession:0,loyersCumul:0};
+  for(const b of APP.state.biens){
+    const f=calcFluxMois(b,ym); for(const k of ['mensualites','assurances','charges','travaux','loyers','total']) flux[k]+=f[k];
+    const c=calcCumul(b,ym); for(const k of Object.keys(cumul)) cumul[k]+=c[k]||0;
+  }
+
+  const compromis=APP.state.biens.filter(b=>b.statut==='compromis');
+  const echeances=agendaAVenir(45).slice(0,5);
+
+  root.innerHTML=`
+  <div class="page active">
+    <div class="spread mb">
+      <div>
+        <h1 style="font-size:22px;font-weight:800">Vue globale</h1>
+        <div style="font-size:13px;color:var(--muted);margin-top:3px">Patrimoine immobilier · ${esc(p1.nom)} & ${esc(p2.nom)}</div>
+      </div>
+      <div class="row">
+        <label class="fl" style="margin:0">Période</label>
+        <input type="month" value="${ym}" onchange="setPeriod(this.value)">
+      </div>
+    </div>
+
+    ${compromis.map(b=>{
+      const d=b.dateSignaturePrevue?Math.ceil((new Date(b.dateSignaturePrevue)-new Date())/86400000):null;
+      return `<div class="hero-banner hb-amber mb">✍️
+        <div style="flex:1"><b>${esc(b.label)}</b> — signature de l'acte authentique prévue le <b>${fmtDate(b.dateSignaturePrevue)}</b>
+        ${d!==null?(d>=0?` · <b>J−${d}</b>`:' · <b>date dépassée</b>'):''}</div>
+        <button class="btn btn-sm btn-p" onclick="acterSignature('${b.id}')">Acter la signature</button></div>`;
+    }).join('')}
+
+    <div class="grid g4 mb">
+      <div class="card card-p">
+        <div class="kpi-label">Patrimoine net <span class="tt"><span class="tt-i">i</span><span class="tt-c">Valeur estimée des biens détenus moins le capital restant dû. Les biens en compromis ne comptent pas encore.</span></span></div>
+        <div class="kpi-value num" style="color:var(--teal)">${fmtEUR(g.net)}</div>
+        <div class="kpi-sub">à ${monthLabel(ym)}</div>
+      </div>
+      <div class="card card-p">
+        <div class="kpi-label">Valeur des biens</div>
+        <div class="kpi-value num">${fmtEUR(g.valeur)}</div>
+        <div class="kpi-sub">${APP.state.biens.filter(b=>b.statut==='detenu').length} bien(s) détenu(s)</div>
+      </div>
+      <div class="card card-p">
+        <div class="kpi-label">Dette restante</div>
+        <div class="kpi-value num" style="color:var(--red)">${fmtEUR(g.dette)}</div>
+        <div class="kpi-sub">capital restant dû tous prêts</div>
+      </div>
+      <div class="card card-p">
+        <div class="kpi-label">Effort du mois <span class="tt"><span class="tt-i">i</span><span class="tt-c">Mensualités + assurances + charges + travaux payés sur le mois sélectionné, moins les loyers encaissés.</span></span></div>
+        <div class="kpi-value num" style="color:var(--amber)">${fmtEUR(flux.total-flux.loyers,0)}</div>
+        <div class="kpi-sub">${flux.loyers>0?'dont '+fmtEUR(flux.loyers,0)+' de loyers encaissés':'sorties : '+fmtEUR(flux.total,0)}</div>
+      </div>
+    </div>
+
+    <div class="grid mb" style="grid-template-columns:1.7fr 1fr">
+      <div class="card card-p">
+        <div class="sec-title">📈 Trajectoire du patrimoine <small>projection sur la durée des crédits</small></div>
+        <div class="chart-box" style="height:260px"><canvas id="chProj"></canvas></div>
+      </div>
+      <div class="card card-p">
+        <div class="sec-title">🥧 Répartition</div>
+        <div class="chart-box" style="height:150px"><canvas id="chDonut"></canvas></div>
+        <div class="mt">
+          <div class="spread" style="margin-bottom:5px"><span style="font-size:12.5px;font-weight:600"><span class="legend-dot" style="background:${p1.couleur}"></span>${esc(p1.nom)}</span><span class="num" style="font-weight:700;color:${p1.couleur}">${fmtPct(pct1)} · ${fmtEUR(g.parP[p1.id])}</span></div>
+          <div class="pbar mb"><div class="pfill blue" style="width:${pct1}%;background:${p1.couleur}"></div></div>
+          <div class="spread" style="margin-bottom:5px"><span style="font-size:12.5px;font-weight:600"><span class="legend-dot" style="background:${p2.couleur}"></span>${esc(p2.nom)}</span><span class="num" style="font-weight:700;color:${p2.couleur}">${fmtPct(pct2)} · ${fmtEUR(g.parP[p2.id])}</span></div>
+          <div class="pbar"><div class="pfill" style="width:${pct2}%;background:${p2.couleur}"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid mb" style="grid-template-columns:1fr 1fr">
+      <div class="card card-p">
+        <div class="sec-title">💶 Flux de ${monthLabel(ym)}</div>
+        <table class="tbl">
+          <tr><td>Mensualités de crédit</td><td class="tr-right num">${fmtEUR(flux.mensualites,2)}</td></tr>
+          <tr><td>Assurances emprunteur</td><td class="tr-right num">${fmtEUR(flux.assurances,2)}</td></tr>
+          <tr><td>Charges courantes</td><td class="tr-right num">${fmtEUR(flux.charges,2)}</td></tr>
+          <tr><td>Travaux & meubles</td><td class="tr-right num">${fmtEUR(flux.travaux,2)}</td></tr>
+          ${flux.loyers?`<tr><td style="color:var(--green)">Loyers encaissés</td><td class="tr-right num" style="color:var(--green)">− ${fmtEUR(flux.loyers,2)}</td></tr>`:''}
+          <tr><td style="font-weight:700">Effort net du mois</td><td class="tr-right num" style="font-weight:800;color:var(--teal)">${fmtEUR(flux.total-flux.loyers,2)}</td></tr>
+        </table>
+      </div>
+      <div class="card card-p">
+        <div class="sec-title">📚 Cumuls depuis l'origine</div>
+        <table class="tbl">
+          <tr><td>Capital remboursé <span class="tt"><span class="tt-i">i</span><span class="tt-c">Part des mensualités transformée en patrimoine.</span></span></td><td class="tr-right num" style="color:var(--green);font-weight:700">${fmtEUR(cumul.capitalRembourse)}</td></tr>
+          <tr><td>Intérêts payés</td><td class="tr-right num" style="color:var(--red)">${fmtEUR(cumul.interetsPayes)}</td></tr>
+          <tr><td>Total investi (hors intérêts)</td><td class="tr-right num">${fmtEUR(cumul.investiCumul)}</td></tr>
+          <tr><td>Coût total de possession</td><td class="tr-right num">${fmtEUR(cumul.coutTotalPossession)}</td></tr>
+          ${cumul.loyersCumul?`<tr><td style="color:var(--green)">Loyers perçus cumulés</td><td class="tr-right num" style="color:var(--green)">${fmtEUR(cumul.loyersCumul)}</td></tr>`:''}
+        </table>
+      </div>
+    </div>
+
+    <div class="card card-p">
+      <div class="spread mb"><div class="sec-title" style="margin:0">⏰ Prochaines échéances</div><button class="btn btn-sm" onclick="navTo('agenda')">Tout voir →</button></div>
+      ${echeances.length?echeances.map(agendaItemHtml).join(''):'<div class="empty">Rien dans les 45 prochains jours 👌</div>'}
+    </div>
+
+    ${APP.state.biens.length===0?`
+    <div class="card card-p mt" style="text-align:center;padding:40px">
+      <div style="font-size:40px">🏛️</div>
+      <h3 style="margin:12px 0 6px">Bienvenue dans ton cockpit patrimoine</h3>
+      <p style="color:var(--muted);font-size:13px;max-width:420px;margin:0 auto 18px">Commence par importer ton fichier <b>data.json</b> (Réglages → Importer) ou ajoute un bien manuellement.</p>
+      <div class="row" style="justify-content:center">
+        <button class="btn btn-p" onclick="navTo('reglages')">Importer mes données</button>
+        <button class="btn" onclick="addBienWizard()">＋ Ajouter un bien</button>
+      </div>
+    </div>`:''}
+  </div>`;
+
+  // Charts
+  if(CHART_OK() && APP.state.biens.some(b=>b.statut==='detenu')){
+    const proj=projectionData();
+    APP.charts.proj=new Chart(document.getElementById('chProj'),{
+      type:'line',
+      data:{labels:proj.map(p=>p.label),datasets:[
+        {label:'Valeur des biens',data:proj.map(p=>p.valeur),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',fill:true,tension:.3,pointRadius:0,borderWidth:2},
+        {label:'Dette (CRD)',data:proj.map(p=>p.dette),borderColor:'#f04438',backgroundColor:'rgba(240,68,56,.05)',fill:true,tension:.3,pointRadius:0,borderWidth:2},
+        {label:'Patrimoine net',data:proj.map(p=>p.net),borderColor:'#0f766e',backgroundColor:'rgba(15,118,110,.10)',fill:true,tension:.3,pointRadius:0,borderWidth:2.5}
+      ]},
+      options:{...chartBase,scales:{y:{ticks:{callback:eurTick,font:{size:10}}},x:{ticks:{font:{size:10},maxTicksLimit:10}}},interaction:{mode:'index',intersect:false}}
+    });
+    const detenus=g.parBien.filter(x=>x.bien.statut==='detenu');
+    const palette=['#0f766e','#b45309','#2563eb','#7c3aed','#be185d'];
+    APP.charts.donut=new Chart(document.getElementById('chDonut'),{
+      type:'doughnut',
+      data:{labels:detenus.map(x=>x.bien.label),datasets:[{data:detenus.map(x=>x.valeur),backgroundColor:palette,borderWidth:2,borderColor:'#fff'}]},
+      options:{...chartBase,cutout:'62%'}
+    });
+  }
+}
+function setPeriod(v){ APP.state.ui.period=v; saveLocal(); renderAll(); }
+
+async function acterSignature(bienId){
+  const b=bienById(bienId); if(!b) return;
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:6px">✍️ Acter la signature — ${esc(b.label)}</h3>
+    <p style="font-size:12.5px;color:var(--muted);margin:0 0 14px">Le bien passe en <b>Détenu</b> : il entre dans le patrimoine, les crédits et flux démarrent.</p>
+    <div class="grid g2 mb">
+      <div><label class="fl">Date de l'acte</label><input id="as_date" type="date" value="${b.dateSignaturePrevue||new Date().toISOString().slice(0,10)}" style="width:100%"></div>
+      <div><label class="fl">Prix d'achat définitif</label><input id="as_prix" type="number" step="0.01" value="${b.prixAchat??''}" style="width:100%"></div>
+      <div><label class="fl">Frais de notaire réels</label><input id="as_notaire" type="number" step="0.01" value="${b.fraisNotaire??''}" style="width:100%"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-p" onclick="confirmSignature('${b.id}')">🎉 C'est signé</button>
+    </div>`);
+}
+function confirmSignature(bienId){
+  const b=bienById(bienId);
+  b.statut='detenu';
+  b.dateAcquisition=document.getElementById('as_date').value;
+  b.prixAchat=parseFloat(document.getElementById('as_prix').value)||b.prixAchat;
+  b.fraisNotaire=parseFloat(document.getElementById('as_notaire').value)||b.fraisNotaire;
+  if(!b.valorisation) b.valorisation={manuelle:[],prixM2:[]};
+  if(!b.valorisation.manuelle.length) b.valorisation.manuelle.push({date:b.dateAcquisition,valeur:b.prixAchat,source:'Prix d\'achat'});
+  saveLocal(); closeModal(); renderAll();
+  toast('🎉 Félicitations pour l\'acquisition !');
+}
+
+// =====================================================================
+// QUICK ADD global
+// =====================================================================
+function openQuickAdd(){
+  const biens=APP.state.biens;
+  if(!biens.length){ toast('Ajoute d\'abord un bien','error'); return; }
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:14px">＋ Ajout rapide</h3>
+    <div class="grid g2">
+      <button class="btn" style="padding:16px;flex-direction:column" onclick="closeModal();quickAddLine('travaux')">🛠️<br>Dépense travaux / meuble</button>
+      <button class="btn" style="padding:16px;flex-direction:column" onclick="closeModal();quickAddLine('charge')">🧾<br>Charge courante</button>
+      <button class="btn" style="padding:16px;flex-direction:column" onclick="closeModal();quickAddLine('loyer')">💶<br>Loyer encaissé</button>
+      <button class="btn" style="padding:16px;flex-direction:column" onclick="closeModal();quickAddLine('valo')">📐<br>Nouvelle estimation</button>
+      <button class="btn" style="padding:16px;flex-direction:column;grid-column:1/-1" onclick="closeModal();openAgendaModal()">🗓️<br>Échéance agenda</button>
+    </div>`);
+}
+function quickAddLine(kind){
+  const biens=APP.state.biens.filter(b=>kind==='loyer'?b.locatif:true);
+  const opts=biens.map(b=>`<option value="${b.id}">${esc(b.label)}</option>`).join('');
+  const labels={travaux:'Dépense travaux / meuble',charge:'Charge courante',loyer:'Loyer encaissé',valo:'Nouvelle estimation de valeur'};
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:14px">${labels[kind]}</h3>
+    <div class="grid g2 mb">
+      <div style="grid-column:1/-1"><label class="fl">Bien</label><select id="qa_bien" style="width:100%">${opts}</select></div>
+      <div><label class="fl">Date</label><input id="qa_date" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:100%"></div>
+      <div><label class="fl">Montant €</label><input id="qa_montant" type="number" step="0.01" style="width:100%"></div>
+      <div style="grid-column:1/-1"><label class="fl">Libellé ${kind==='valo'?'/ source':''}</label><input id="qa_lib" type="text" style="width:100%"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-p" onclick="confirmQuickAdd('${kind}')">Ajouter</button>
+    </div>`);
+}
+function confirmQuickAdd(kind){
+  const b=bienById(document.getElementById('qa_bien').value);
+  const date=document.getElementById('qa_date').value;
+  const montant=parseFloat(document.getElementById('qa_montant').value)||0;
+  const lib=document.getElementById('qa_lib').value;
+  if(kind==='travaux'){ (b.travauxCompta=b.travauxCompta||[]).push({id:uid('c'),date,poste:lib||'Dépense',montant,partArmand:b.quoteParts.armand,partVictoria:b.quoteParts.victoria,categorie:'travaux',posteId:null}); }
+  else if(kind==='charge'){ (b.chargesRecurrentes=b.chargesRecurrentes||[]).push({id:uid('ch'),date,type:'autre',libelle:lib,montant,partArmand:100,partVictoria:0}); }
+  else if(kind==='loyer'){ b.locatif.loyers=b.locatif.loyers||[]; b.locatif.loyers.push({id:uid('l'),date,montant,note:lib}); }
+  else if(kind==='valo'){ b.valorisation=b.valorisation||{manuelle:[],prixM2:[]}; b.valorisation.manuelle.push({date,valeur:montant,source:lib||'Estimation'}); }
+  saveLocal(); closeModal(); renderAll(); toast('Ajouté ✓');
+}
+// =====================================================================
+// PAGE BIEN (générique)
+// =====================================================================
+function bienTabs(bien){
+  const t=[{id:'ov',label:'Vue d\'ensemble'},{id:'credits',label:'Crédits'}];
+  t.push({id:'travaux',label:'Travaux & meubles'});
+  t.push({id:'charges',label:'Charges'});
+  if(bien.type==='LMNP'){ t.push({id:'locatif',label:'Locatif'}); t.push({id:'fiscal',label:'Fiscalité LMNP'}); }
+  t.push({id:'valo',label:'Valorisation'});
+  t.push({id:'docs',label:'Documents'});
+  return t;
+}
+function renderBien(root,bien){
+  const curTab=APP.state.ui['tab_'+bien.id]||'ov';
+  const infos=[bien.adresse, bien.surface?bien.surface+' m²':null, bien.lot?'Lot '+bien.lot:null, bien.dpe?'DPE '+bien.dpe:null,
+    bien.statut==='detenu'?'acquis le '+fmtDate(bien.dateAcquisition):(bien.dateSignaturePrevue?'signature prévue le '+fmtDate(bien.dateSignaturePrevue):null)]
+    .filter(Boolean).join(' · ');
+  root.innerHTML=`
+  <div class="page active">
+    <div class="card card-p mb">
+      <div class="spread">
+        <div>
+          <div class="row" style="gap:8px">
+            <span style="font-size:24px">${BIEN_ICONS[bien.type]||'🏠'}</span>
+            <h1 style="font-size:20px;font-weight:800">${esc(bien.label)}</h1>
+            ${STATUT_BADGE[bien.statut]||''}
+            <span class="badge b-grey">${bien.type}</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:5px">${esc(infos)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">Quote-parts : <b style="color:${P1().couleur}">${esc(P1().nom.split(' ')[0])} ${bien.quoteParts.armand}%</b> · <b style="color:${P2().couleur}">${esc(P2().nom.split(' ')[0])} ${bien.quoteParts.victoria}%</b></div>
+        </div>
+        <div style="text-align:right">
+          <div class="kpi-label">Prix d'achat</div>
+          <div class="num" style="font-size:20px;font-weight:800">${fmtEUR(bien.prixAchat)}</div>
+          <div style="font-size:11.5px;color:var(--muted)">+ ${fmtEUR(bien.fraisNotaire)} de frais</div>
+          <button class="btn btn-sm mt" onclick="editBien('${bien.id}')">✎ Modifier la fiche</button>
+        </div>
+      </div>
+      ${bien.statut==='compromis'?`<div class="hero-banner hb-amber mt">✍️ <div style="flex:1">Bien en compromis — les indicateurs patrimoine s'activeront à la signature.</div><button class="btn btn-sm btn-p" onclick="acterSignature('${bien.id}')">Acter la signature</button></div>`:''}
+    </div>
+    <div class="tabs">${bienTabs(bien).map(t=>`<div class="tab ${curTab===t.id?'active':''}" onclick="setBienTab('${bien.id}','${t.id}')">${t.label}</div>`).join('')}</div>
+    <div id="bienTabContent"></div>
+  </div>`;
+  const c=document.getElementById('bienTabContent');
+  if(curTab==='ov') renderBienOverview(c,bien);
+  else if(curTab==='credits') renderBienCredits(c,bien);
+  else if(curTab==='travaux') renderBienTravaux(c,bien);
+  else if(curTab==='charges') renderBienCharges(c,bien);
+  else if(curTab==='locatif') renderBienLocatif(c,bien);
+  else if(curTab==='fiscal') renderBienFiscal(c,bien);
+  else if(curTab==='valo') renderBienValo(c,bien);
+  else if(curTab==='docs') renderBienDocs(c,bien);
+}
+function setBienTab(bienId,tab){
+  APP.state.ui['tab_'+bienId]=tab;
+  localStorage.setItem(APP.LS_KEY, JSON.stringify(APP.state));
+  renderAll();
+}
+
+// ---------- Vue d'ensemble ----------
+function renderBienOverview(c,bien){
+  const ym=APP.state.ui.period;
+  const cum=calcCumul(bien,ym);
+  const flux=calcFluxMois(bien,ym);
+  const v=bienValeur(bien,ym);
+  const net=v.retenue-cum.capitalRestantTotal;
+  const totCI=cum.capitalRembourse+cum.interetsPayes;
+  const pctCap=totCI>0?cum.capitalRembourse/totCI*100:0;
+  const totParts=cum.parP[P1().id]+cum.parP[P2().id];
+
+  if(bien.statut!=='detenu'){
+    const investPrevu=(bien.prixAchat||0)+(bien.fraisNotaire||0);
+    c.innerHTML=`
+      <div class="grid g3 mb">
+        <div class="card card-p"><div class="kpi-label">Prix négocié</div><div class="kpi-value num">${fmtEUR(bien.prixAchat)}</div><div class="kpi-sub">+ ${fmtEUR(bien.fraisNotaire)} frais estimés</div></div>
+        <div class="card card-p"><div class="kpi-label">Budget total</div><div class="kpi-value num" style="color:var(--amber)">${fmtEUR(investPrevu)}</div><div class="kpi-sub">acquisition + frais</div></div>
+        <div class="card card-p"><div class="kpi-label">Financement prévu</div><div class="kpi-value num">${fmtEUR((bien.prets||[]).reduce((a,p)=>a+p.montant,0))}</div><div class="kpi-sub">${(bien.prets||[]).length} prêt(s) · apport ${fmtEUR(investPrevu-(bien.prets||[]).reduce((a,p)=>a+p.montant,0))}</div></div>
+      </div>
+      ${bien.locatif?renderMiniCashflow(bien):''}`;
+    return;
+  }
+
+  c.innerHTML=`
+    <div class="grid g4 mb">
+      <div class="card card-p">
+        <div class="kpi-label">Patrimoine net du bien</div>
+        <div class="kpi-value num" style="color:var(--teal)">${fmtEUR(net)}</div>
+        <div class="kpi-sub">valeur ${fmtEUR(v.retenue)} − dette ${fmtEUR(cum.capitalRestantTotal)}</div>
+      </div>
+      <div class="card card-p">
+        <div class="kpi-label">Coût total de possession <span class="tt"><span class="tt-i">i</span><span class="tt-c">Tout ce qui est sorti depuis l'acquisition : mensualités (capital + intérêts), assurances, travaux, meubles, charges.</span></span></div>
+        <div class="kpi-value num" style="color:var(--red)">${fmtEUR(cum.coutTotalPossession)}</div>
+        <div class="kpi-sub">dont intérêts ${fmtEUR(cum.interetsPayes)} · travaux ${fmtEUR(cum.travauxCumul)}</div>
+      </div>
+      <div class="card card-p">
+        <div class="kpi-label">Effort mensuel actuel</div>
+        <div class="kpi-value num" style="color:var(--amber)">${fmtEUR(flux.mensualites+flux.assurances,0)}</div>
+        <div class="kpi-sub">crédit ${fmtEUR(flux.mensualites,0)} + assurances ${fmtEUR(flux.assurances,0)}</div>
+      </div>
+      <div class="card card-p">
+        <div class="kpi-label">Capital vs intérêts</div>
+        <div class="kpi-value num" style="font-size:18px"><span style="color:var(--green)">${fmtEUR(cum.capitalRembourse)}</span> <span style="color:var(--faint);font-size:13px">/</span> <span style="color:var(--red)">${fmtEUR(cum.interetsPayes)}</span></div>
+        <div class="pbar mt"><div class="pfill" style="width:${pctCap}%"></div></div>
+        <div class="kpi-sub">${fmtPct(pctCap,0)} transformé en patrimoine</div>
+      </div>
+    </div>
+    <div class="grid mb" style="grid-template-columns:1fr 1.4fr">
+      <div class="card card-p">
+        <div class="sec-title">🧩 Décomposition du coût</div>
+        <div class="chart-box" style="height:220px"><canvas id="chCout"></canvas></div>
+      </div>
+      <div class="card card-p">
+        <div class="sec-title">👥 Qui a payé quoi (cumul)</div>
+        <div class="spread" style="margin-bottom:5px"><span style="font-weight:600;font-size:13px">${esc(P1().nom)}</span><span class="num" style="font-weight:700;color:${P1().couleur}">${fmtEUR(cum.parP[P1().id],0)} · ${totParts>0?fmtPct(cum.parP[P1().id]/totParts*100,0):'—'}</span></div>
+        <div class="pbar mb"><div class="pfill" style="width:${totParts>0?cum.parP[P1().id]/totParts*100:0}%;background:${P1().couleur}"></div></div>
+        <div class="spread" style="margin-bottom:5px"><span style="font-weight:600;font-size:13px">${esc(P2().nom)}</span><span class="num" style="font-weight:700;color:${P2().couleur}">${fmtEUR(cum.parP[P2().id],0)} · ${totParts>0?fmtPct(cum.parP[P2().id]/totParts*100,0):'—'}</span></div>
+        <div class="pbar mb"><div class="pfill" style="width:${totParts>0?cum.parP[P2().id]/totParts*100:0}%;background:${P2().couleur}"></div></div>
+        <table class="tbl mt">
+          <tr><td>Flux du mois (${monthLabel(ym)})</td><td class="tr-right num">${fmtEUR(flux.total,2)}</td></tr>
+          <tr><td style="padding-left:20px;color:var(--muted)">dont ${esc(P1().nom.split(' ')[0])}</td><td class="tr-right num" style="color:${P1().couleur}">${fmtEUR(flux.parP[P1().id],2)}</td></tr>
+          <tr><td style="padding-left:20px;color:var(--muted)">dont ${esc(P2().nom.split(' ')[0])}</td><td class="tr-right num" style="color:${P2().couleur}">${fmtEUR(flux.parP[P2().id],2)}</td></tr>
+          ${bien.locatif && flux.loyers?`<tr><td style="color:var(--green)">Loyers du mois</td><td class="tr-right num" style="color:var(--green)">${fmtEUR(flux.loyers,2)}</td></tr>`:''}
+        </table>
+      </div>
+    </div>
+    ${bien.locatif?renderMiniCashflow(bien):''}`;
+
+  if(CHART_OK()){
+    APP.charts.cout=new Chart(document.getElementById('chCout'),{
+      type:'doughnut',
+      data:{labels:['Capital remboursé','Intérêts','Assurances','Travaux & meubles','Charges'],
+        datasets:[{data:[cum.capitalRembourse,cum.interetsPayes,cum.assurancesCumul,cum.travauxCumul,cum.chargesCumul],
+        backgroundColor:['#0f766e','#f04438','#f79009','#2563eb','#7c3aed'],borderWidth:2,borderColor:'#fff'}]},
+      options:{...chartBase,cutout:'58%'}
+    });
+  }
+}
+function renderMiniCashflow(bien){
+  const cf=lmnpCashflow(bien);
+  return `<div class="card card-p mb">
+    <div class="sec-title">💶 Cash-flow locatif théorique <small>loyer ${fmtEUR(cf.loyer,0)}/mois HC</small></div>
+    <div class="grid g4">
+      <div><div class="kpi-label">Loyer mensuel</div><div class="num" style="font-size:19px;font-weight:800;color:var(--green)">+${fmtEUR(cf.loyer,0)}</div></div>
+      <div><div class="kpi-label">Crédit + assurance</div><div class="num" style="font-size:19px;font-weight:800;color:var(--red)">−${fmtEUR(cf.mens,0)}</div></div>
+      <div><div class="kpi-label">Charges (÷12)</div><div class="num" style="font-size:19px;font-weight:800;color:var(--red)">−${fmtEUR(cf.chargesMois,0)}</div></div>
+      <div><div class="kpi-label">Cash-flow net</div><div class="num" style="font-size:19px;font-weight:800;color:${cf.cfMois>=0?'var(--green)':'var(--red)'}">${cf.cfMois>=0?'+':''}${fmtEUR(cf.cfMois,0)}/mois</div></div>
+    </div>
+  </div>`;
+}
+
+// ---------- Crédits ----------
+function renderBienCredits(c,bien){
+  const ym=APP.state.ui.period;
+  let html=`<div class="spread mb"><div class="sec-title" style="margin:0">💳 Prêts <span class="badge b-grey">${(bien.prets||[]).length}</span></div>
+    <button class="btn btn-sm" onclick="editPret('${bien.id}',null)">＋ Ajouter un prêt</button></div>
+    <div class="grid g2 mb">`;
+  for(const pret of bien.prets||[]){
+    const st=calcPretAtDate(pret,ym);
+    const pct=pret.montant>0?st.capitalRembourseCumul/pret.montant*100:0;
+    html+=`
+    <div class="card card-p">
+      <div class="spread mb">
+        <div><div style="font-weight:700">${esc(pret.label)}</div>
+        <div style="font-size:11.5px;color:var(--muted)">${esc(pret.banque||'')} ${pret.numero?'· n°'+esc(pret.numero):''} ${pret.tableauReel?'· <span class="badge b-teal">📋 échéancier bancaire réel</span>':'· échéancier simulé'}</div></div>
+        <button class="btn btn-icon" onclick="editPret('${bien.id}','${pret.id}')">✎</button>
+      </div>
+      <div class="grid g4" style="gap:8px;font-size:12px">
+        <div><div class="kpi-label" style="font-size:10px">Montant</div><div class="num" style="font-weight:700">${fmtEUR(pret.montant)}</div></div>
+        <div><div class="kpi-label" style="font-size:10px">Taux</div><div class="num" style="font-weight:700">${pret.taux} %</div></div>
+        <div><div class="kpi-label" style="font-size:10px">Durée</div><div class="num">${pretSchedule(pret).length} éch.</div></div>
+        <div><div class="kpi-label" style="font-size:10px">Mensualité</div><div class="num" style="font-weight:700">${fmtEUR(pret.mensualiteAvecAssurance||pret.mensualiteCapInteret,2)}</div></div>
+      </div>
+      <div class="mt">
+        <div class="spread" style="font-size:11.5px;margin-bottom:4px"><span>Remboursé ${fmtPct(pct,1)}</span><span class="num">${st.moisEcoules} / ${st.dureeTot} échéances</span></div>
+        <div class="pbar"><div class="pfill" style="width:${pct}%"></div></div>
+      </div>
+      <table class="tbl mt" style="font-size:12px">
+        <tr><td>Capital remboursé</td><td class="tr-right num" style="color:var(--green);font-weight:700">${fmtEUR(st.capitalRembourseCumul)}</td></tr>
+        <tr><td>Capital restant dû</td><td class="tr-right num" style="color:var(--red);font-weight:700">${fmtEUR(st.capitalRestant)}</td></tr>
+        <tr><td>Intérêts payés (dont intercalaires ${fmtEUR(pret.interetsIntercalaires||0,0)})</td><td class="tr-right num">${fmtEUR(st.interetsPayesCumul)}</td></tr>
+        ${(pret.fraisDossier||pret.caution)?`<tr><td>Frais dossier + garantie</td><td class="tr-right num">${fmtEUR((pret.fraisDossier||0)+(pret.caution||0))}</td></tr>`:''}
+        <tr><td>Quote-part</td><td class="tr-right"><span class="badge b-blue">${P1().nom.split(' ')[0]} ${pret.partArmand}%</span> <span class="badge b-violet">${P2().nom.split(' ')[0]} ${pret.partVictoria}%</span></td></tr>
+      </table>
+      <button class="btn btn-sm mt" onclick="showAmortTable('${bien.id}','${pret.id}')">📋 Tableau d'amortissement</button>
+    </div>`;
+  }
+  html+=`</div>`;
+
+  // Assurances
+  html+=`<div class="spread mb"><div class="sec-title" style="margin:0">🛡️ Assurances emprunteur <span class="badge b-grey">${(bien.assurances||[]).length}</span></div>
+    <button class="btn btn-sm" onclick="editAssurance('${bien.id}',null)">＋ Ajouter</button></div>
+    <div class="card scroll-wrap"><table class="tbl">
+    <thead><tr><th>Assuré</th><th>Prêt</th><th>Quotité</th><th class="tr-right">Cotisation</th><th>Répartition</th><th></th></tr></thead><tbody>`;
+  for(const ass of bien.assurances||[]){
+    const pret=(bien.prets||[]).find(p=>p.id===ass.pretId);
+    html+=`<tr>
+      <td style="font-weight:600">${esc(ass.label||ass.personne)} ${ass.aRemplir?'<span class="badge b-red">à confirmer</span>':''}</td>
+      <td style="color:var(--muted);font-size:11.5px">${pret?esc(pret.label):'—'}</td>
+      <td class="num">${ass.quotite??100} %</td>
+      <td class="tr-right num" style="font-weight:700">${fmtEUR(ass.cotMensuelle,2)}/mois</td>
+      <td><span class="badge b-blue">${ass.partArmand??50}%</span> <span class="badge b-violet">${ass.partVictoria??50}%</span></td>
+      <td><button class="btn btn-icon" onclick="editAssurance('${bien.id}','${ass.id}')">✎</button></td>
+    </tr>`;
+  }
+  html+=`</tbody></table></div>
+  <div class="card card-p mt"><div class="sec-title">📉 Capital restant dû</div><div class="chart-box" style="height:220px"><canvas id="chCRD"></canvas></div></div>`;
+  c.innerHTML=html;
+
+  if(CHART_OK() && (bien.prets||[]).length){
+    const colors=['#0f766e','#2563eb','#b45309'];
+    const datasets=(bien.prets||[]).map((p,i)=>{
+      const sched=pretSchedule(p);
+      const startYm=dateToYM(p.dateDebutAmortissement||p.premiereEcheance||p.dateDepart);
+      const data=[],labels=[];
+      for(let k=0;k<sched.length;k+=12){ labels.push(ymToDate(addMonths(startYm,k)).getFullYear()); data.push(sched[k].crd); }
+      return {label:p.label,data,labels,borderColor:colors[i%3],backgroundColor:'transparent',tension:.3,pointRadius:0,borderWidth:2};
+    });
+    const labels=datasets.reduce((a,d)=>d.labels.length>a.length?d.labels:a,[]);
+    APP.charts.crd=new Chart(document.getElementById('chCRD'),{type:'line',
+      data:{labels,datasets},
+      options:{...chartBase,scales:{y:{ticks:{callback:eurTick,font:{size:10}}},x:{ticks:{font:{size:10},maxTicksLimit:12}}}}});
+  }
+}
+
+function showAmortTable(bienId,pretId){
+  const bien=bienById(bienId), pret=bien.prets.find(p=>p.id===pretId);
+  const sched=pretSchedule(pret);
+  const startYm=dateToYM(pret.dateDebutAmortissement||pret.premiereEcheance||pret.dateDepart);
+  const ymNow=APP.state.ui.period;
+  const kNow=monthsBetween(startYm,ymNow)+1;
+  let rows='';
+  for(const r of sched){
+    const ym=addMonths(startYm,r.n-1);
+    rows+=`<tr style="${r.n===kNow?'background:var(--teal-soft);font-weight:600':''}">
+      <td class="num">${r.n}</td><td>${monthLabel(ym)}</td>
+      <td class="tr-right num">${fmtEUR(r.amort,2)}</td><td class="tr-right num">${fmtEUR(r.int,2)}</td>
+      <td class="tr-right num">${fmtEUR(r.ass,2)}</td><td class="tr-right num" style="font-weight:600">${fmtEUR(r.ech,2)}</td>
+      <td class="tr-right num">${fmtEUR(r.crd,2)}</td></tr>`;
+  }
+  genericModal(`
+    <div class="spread mb"><h3 style="font-size:16px">📋 ${esc(pret.label)} — échéancier ${pret.tableauReel?'bancaire réel':'simulé'}</h3>
+    <button class="btn btn-sm" onclick="closeModal()">✕</button></div>
+    <p style="font-size:11.5px;color:var(--muted);margin:0 0 10px">1ʳᵉ échéance d'amortissement : ${monthLabel(startYm)}${pret.interetsIntercalaires?' · Intérêts intercalaires avant amortissement : '+fmtEUR(pret.interetsIntercalaires,2):''}</p>
+    <div style="max-height:55vh;overflow:auto;border:1px solid var(--line);border-radius:10px">
+    <table class="tbl"><thead><tr><th>N°</th><th>Mois</th><th class="tr-right">Capital</th><th class="tr-right">Intérêts</th><th class="tr-right">Assur.</th><th class="tr-right">Échéance</th><th class="tr-right">CRD</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`);
+}
+
+// ---------- Édition prêt / assurance / bien ----------
+function editPret(bienId,pretId){
+  const bien=bienById(bienId);
+  const pret=pretId?bien.prets.find(p=>p.id===pretId):{id:null,label:'Nouveau prêt',banque:'',montant:0,taux:1,dureeMois:240,mensualiteCapInteret:0,mensualiteAvecAssurance:0,interetsIntercalaires:0,fraisDossier:0,caution:0,dateDepart:'',premiereEcheance:'',dateDebutAmortissement:'',partArmand:bien.quoteParts.armand,partVictoria:bien.quoteParts.victoria};
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:4px">${pretId?'Éditer':'Nouveau'} prêt</h3>
+    ${pret.tableauReel?'<p style="font-size:11.5px;color:var(--amber);margin:4px 0 10px">⚠️ Ce prêt utilise l\'échéancier bancaire réel : montant/taux/durée servent d\'information, les calculs suivent le tableau importé.</p>':'<p style="font-size:11.5px;color:var(--muted);margin:4px 0 10px">⚠️ Ces paramètres impactent tous les calculs.</p>'}
+    <div class="grid g2 mb">
+      <div><label class="fl">Label</label><input id="ep_label" value="${esc(pret.label)}" style="width:100%"></div>
+      <div><label class="fl">Banque</label><input id="ep_banque" value="${esc(pret.banque||'')}" style="width:100%"></div>
+      <div><label class="fl">Montant €</label><input id="ep_montant" type="number" step="0.01" value="${pret.montant}" style="width:100%"></div>
+      <div><label class="fl">Taux %</label><input id="ep_taux" type="number" step="0.01" value="${pret.taux}" style="width:100%"></div>
+      <div><label class="fl">Durée amortissement (mois)</label><input id="ep_duree" type="number" value="${pret.dureeMois}" style="width:100%"></div>
+      <div><label class="fl">Mensualité C+I (hors ass.)</label><input id="ep_mens" type="number" step="0.01" value="${pret.mensualiteCapInteret}" style="width:100%"></div>
+      <div><label class="fl">Mensualité totale (avec ass.)</label><input id="ep_menst" type="number" step="0.01" value="${pret.mensualiteAvecAssurance||''}" style="width:100%"></div>
+      <div><label class="fl">Date départ</label><input id="ep_dep" type="date" value="${pret.dateDepart||''}" style="width:100%"></div>
+      <div><label class="fl">1ʳᵉ échéance</label><input id="ep_first" type="date" value="${pret.premiereEcheance||''}" style="width:100%"></div>
+      <div><label class="fl">Début amortissement <span class="tt"><span class="tt-i">i</span><span class="tt-c">Si déblocage progressif (différé), date à partir de laquelle le capital se rembourse vraiment.</span></span></label><input id="ep_amort" type="date" value="${pret.dateDebutAmortissement||''}" style="width:100%"></div>
+      <div><label class="fl">Intérêts intercalaires €</label><input id="ep_inter" type="number" step="0.01" value="${pret.interetsIntercalaires||0}" style="width:100%"></div>
+      <div><label class="fl">Frais dossier €</label><input id="ep_fd" type="number" step="0.01" value="${pret.fraisDossier||0}" style="width:100%"></div>
+      <div><label class="fl">Caution / garantie €</label><input id="ep_caution" type="number" step="0.01" value="${pret.caution||0}" style="width:100%"></div>
+      <div><label class="fl">Part ${esc(P1().nom.split(' ')[0])} %</label><input id="ep_pa" type="number" value="${pret.partArmand}" style="width:100%"></div>
+      <div><label class="fl">Part ${esc(P2().nom.split(' ')[0])} %</label><input id="ep_pv" type="number" value="${pret.partVictoria}" style="width:100%"></div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      ${pretId?`<button class="btn btn-danger btn-sm" onclick="delPret('${bienId}','${pretId}')">🗑️ Supprimer</button>`:'<span></span>'}
+      <div class="row"><button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-p" onclick="savePret('${bienId}','${pretId||''}')">Enregistrer</button></div>
+    </div>`);
+}
+async function savePret(bienId,pretId){
+  const bien=bienById(bienId);
+  const g=id=>document.getElementById(id).value;
+  const isNew=!pretId;
+  const pret=isNew?{id:uid('pret')}:bien.prets.find(p=>p.id===pretId);
+  if(!isNew){
+    const ok=await confirmModal({title:'Modifier ce prêt ?',body:'Impacte : capital remboursé, intérêts, mensualités, patrimoine net, répartition.'});
+    if(!ok) return;
+  }
+  Object.assign(pret,{label:g('ep_label'),banque:g('ep_banque'),montant:+g('ep_montant'),taux:+g('ep_taux'),
+    dureeMois:+g('ep_duree'),mensualiteCapInteret:+g('ep_mens'),mensualiteAvecAssurance:+g('ep_menst')||null,
+    dateDepart:g('ep_dep'),premiereEcheance:g('ep_first'),dateDebutAmortissement:g('ep_amort'),
+    interetsIntercalaires:+g('ep_inter')||0,fraisDossier:+g('ep_fd')||0,caution:+g('ep_caution')||0,
+    partArmand:+g('ep_pa'),partVictoria:+g('ep_pv')});
+  delete pret._schedCache;
+  if(isNew) (bien.prets=bien.prets||[]).push(pret);
+  saveLocal(); closeModal(); renderAll(); toast('Prêt enregistré ✓');
+}
+async function delPret(bienId,pretId){
+  const ok=await confirmModal({title:'Supprimer ce prêt ?',body:'Les assurances liées resteront à réaffecter.'});
+  if(!ok) return;
+  const bien=bienById(bienId);
+  bien.prets=bien.prets.filter(p=>p.id!==pretId);
+  saveLocal(); closeModal(); renderAll();
+}
+function editAssurance(bienId,assId){
+  const bien=bienById(bienId);
+  const ass=assId?bien.assurances.find(a=>a.id===assId):{id:null,label:'',personne:'armand',pretId:(bien.prets[0]||{}).id,cotMensuelle:0,quotite:100,partArmand:50,partVictoria:50};
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:12px">${assId?'Éditer':'Nouvelle'} assurance</h3>
+    <div class="grid g2 mb">
+      <div><label class="fl">Label</label><input id="ea_label" value="${esc(ass.label)}" style="width:100%"></div>
+      <div><label class="fl">Assuré</label><select id="ea_pers" style="width:100%">
+        <option value="armand" ${ass.personne==='armand'?'selected':''}>${esc(P1().nom)}</option>
+        <option value="victoria" ${ass.personne==='victoria'?'selected':''}>${esc(P2().nom)}</option></select></div>
+      <div><label class="fl">Prêt lié</label><select id="ea_pret" style="width:100%">${(bien.prets||[]).map(p=>`<option value="${p.id}" ${ass.pretId===p.id?'selected':''}>${esc(p.label)}</option>`).join('')}</select></div>
+      <div><label class="fl">Quotité %</label><input id="ea_quot" type="number" value="${ass.quotite}" style="width:100%"></div>
+      <div><label class="fl">Cotisation mensuelle €</label><input id="ea_cot" type="number" step="0.01" value="${ass.cotMensuelle}" style="width:100%"></div>
+      <div></div>
+      <div><label class="fl">Part ${esc(P1().nom.split(' ')[0])} %</label><input id="ea_pa" type="number" value="${ass.partArmand??50}" style="width:100%"></div>
+      <div><label class="fl">Part ${esc(P2().nom.split(' ')[0])} %</label><input id="ea_pv" type="number" value="${ass.partVictoria??50}" style="width:100%"></div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      ${assId?`<button class="btn btn-danger btn-sm" onclick="delAssurance('${bienId}','${assId}')">🗑️</button>`:'<span></span>'}
+      <div class="row"><button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-p" onclick="saveAssurance('${bienId}','${assId||''}')">Enregistrer</button></div>
+    </div>`);
+}
+function saveAssurance(bienId,assId){
+  const bien=bienById(bienId);
+  const g=id=>document.getElementById(id).value;
+  const isNew=!assId;
+  const ass=isNew?{id:uid('ass')}:bien.assurances.find(a=>a.id===assId);
+  Object.assign(ass,{label:g('ea_label'),personne:g('ea_pers'),pretId:g('ea_pret'),quotite:+g('ea_quot'),
+    cotMensuelle:+g('ea_cot'),partArmand:+g('ea_pa'),partVictoria:+g('ea_pv'),aRemplir:false});
+  if(isNew)(bien.assurances=bien.assurances||[]).push(ass);
+  saveLocal(); closeModal(); renderAll(); toast('Assurance enregistrée ✓');
+}
+async function delAssurance(bienId,assId){
+  const ok=await confirmModal({title:'Supprimer cette assurance ?',body:'Elle sera retirée des cumuls.'});
+  if(!ok) return;
+  const bien=bienById(bienId);
+  bien.assurances=bien.assurances.filter(a=>a.id!==assId);
+  saveLocal(); closeModal(); renderAll();
+}
+function editBien(bienId){
+  const b=bienById(bienId);
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:12px">Fiche du bien</h3>
+    <div class="grid g2 mb">
+      <div><label class="fl">Nom</label><input id="eb_label" value="${esc(b.label)}" style="width:100%"></div>
+      <div><label class="fl">Type</label><select id="eb_type" style="width:100%">
+        <option value="RP" ${b.type==='RP'?'selected':''}>Résidence principale</option>
+        <option value="LMNP" ${b.type==='LMNP'?'selected':''}>LMNP (loc. meublée)</option>
+        <option value="AUTRE" ${b.type==='AUTRE'?'selected':''}>Autre</option></select></div>
+      <div style="grid-column:1/-1"><label class="fl">Adresse</label><input id="eb_adr" value="${esc(b.adresse||'')}" style="width:100%"></div>
+      <div><label class="fl">Surface m²</label><input id="eb_surf" type="number" step="0.01" value="${b.surface||''}" style="width:100%"></div>
+      <div><label class="fl">Lot / étage</label><input id="eb_lot" value="${esc(b.lot||'')}" style="width:100%"></div>
+      <div><label class="fl">DPE</label><select id="eb_dpe" style="width:100%"><option value="">—</option>${['A','B','C','D','E','F','G'].map(x=>`<option ${b.dpe===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div><label class="fl">Statut</label><select id="eb_statut" style="width:100%">
+        <option value="detenu" ${b.statut==='detenu'?'selected':''}>Détenu</option>
+        <option value="compromis" ${b.statut==='compromis'?'selected':''}>Compromis</option>
+        <option value="vendu" ${b.statut==='vendu'?'selected':''}>Vendu</option></select></div>
+      <div><label class="fl">Prix d'achat €</label><input id="eb_prix" type="number" step="0.01" value="${b.prixAchat??''}" style="width:100%"></div>
+      <div><label class="fl">Frais notaire €</label><input id="eb_notaire" type="number" step="0.01" value="${b.fraisNotaire??''}" style="width:100%"></div>
+      <div><label class="fl">Date acquisition</label><input id="eb_dacq" type="date" value="${b.dateAcquisition||''}" style="width:100%"></div>
+      <div><label class="fl">Signature prévue (si compromis)</label><input id="eb_dsig" type="date" value="${b.dateSignaturePrevue||''}" style="width:100%"></div>
+      <div><label class="fl">Quote-part ${esc(P1().nom.split(' ')[0])} %</label><input id="eb_qpa" type="number" value="${b.quoteParts.armand}" style="width:100%"></div>
+      <div><label class="fl">Quote-part ${esc(P2().nom.split(' ')[0])} %</label><input id="eb_qpv" type="number" value="${b.quoteParts.victoria}" style="width:100%"></div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <button class="btn btn-danger btn-sm" onclick="delBien('${b.id}')">🗑️ Supprimer le bien</button>
+      <div class="row"><button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-p" onclick="saveBien('${b.id}')">Enregistrer</button></div>
+    </div>`);
+}
+function saveBien(bienId){
+  const b=bienById(bienId);
+  const g=id=>document.getElementById(id).value;
+  const wasLMNP=b.type==='LMNP';
+  Object.assign(b,{label:g('eb_label'),type:g('eb_type'),adresse:g('eb_adr'),surface:+g('eb_surf')||null,
+    lot:g('eb_lot'),dpe:g('eb_dpe'),statut:g('eb_statut'),prixAchat:+g('eb_prix')||null,fraisNotaire:+g('eb_notaire')||0,
+    dateAcquisition:g('eb_dacq')||b.dateAcquisition,dateSignaturePrevue:g('eb_dsig')||null,
+    quoteParts:{armand:+g('eb_qpa'),victoria:+g('eb_qpv')}});
+  if(b.type==='LMNP'&&!b.locatif) b.locatif=defaultLocatif();
+  saveLocal(); closeModal(); renderAll(); toast('Fiche mise à jour ✓');
+}
+async function delBien(bienId){
+  const b=bienById(bienId);
+  const ok=await confirmModal({title:'Supprimer '+b.label+' ?',body:'<b>Toutes les données du bien</b> (prêts, travaux, charges, locatif) seront supprimées. Les documents du coffre resteront.',okLabel:'Supprimer définitivement'});
+  if(!ok) return;
+  APP.state.biens=APP.state.biens.filter(x=>x.id!==bienId);
+  APP.state.ui.page='dashboard';
+  saveLocal(); closeModal(); renderAll();
+}
+function defaultLocatif(){
+  const y=new Date().getFullYear();
+  const suivi={}; for(let i=0;i<4;i++) suivi[y+i]=Array(12).fill().map(()=>({s:'vacant',l:'',n:''}));
+  return {loyerHC:0,chargesRecup:0,locataire:'',bailDebut:'',suivi,suiviYear:y,
+    chargesAnnuelles:{tf:0,cp:0,pno:0,gli:0,cfe:0,ent:0},regime:'reel',
+    amort:{bati:0,durb:30,mob:0,durm:7},revente:{prix:0,duree:10},loyers:[]};
+}
+function addBienWizard(){
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:12px">＋ Nouveau bien</h3>
+    <div class="grid g2 mb">
+      <div><label class="fl">Nom</label><input id="nb_label" placeholder="ex : Studio Toulon" style="width:100%"></div>
+      <div><label class="fl">Type</label><select id="nb_type" style="width:100%"><option value="RP">Résidence principale</option><option value="LMNP">LMNP</option><option value="AUTRE">Autre</option></select></div>
+      <div><label class="fl">Statut</label><select id="nb_statut" style="width:100%"><option value="compromis">Compromis</option><option value="detenu">Détenu</option></select></div>
+      <div><label class="fl">Prix d'achat €</label><input id="nb_prix" type="number" style="width:100%"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Annuler</button>
+    <button class="btn btn-p" onclick="confirmAddBien()">Créer</button></div>`);
+}
+function confirmAddBien(){
+  const g=id=>document.getElementById(id).value;
+  const type=g('nb_type');
+  const b={id:uid('bien'),type,label:g('nb_label')||'Nouveau bien',statut:g('nb_statut'),adresse:'',surface:null,
+    prixAchat:+g('nb_prix')||null,fraisNotaire:0,dateAcquisition:null,dateSignaturePrevue:null,
+    quoteParts:{armand:50,victoria:50},valorisation:{manuelle:[],prixM2:[]},prets:[],assurances:[],
+    travauxPrevi:[],travauxCompta:[],chargesRecurrentes:[]};
+  if(type==='LMNP') b.locatif=defaultLocatif();
+  APP.state.biens.push(b);
+  if(!APP.state.coffreCats[b.id]) APP.state.coffreCats[b.id]=defaultCoffreCats();
+  APP.state.ui.page='bien:'+b.id;
+  saveLocal(); closeModal(); renderAll();
+}
+// =====================================================================
+// TRAVAUX & MEUBLES
+// =====================================================================
+const CAT_TRAVAUX={gros_oeuvre:'Gros œuvre',second_oeuvre:'Second œuvre',finition:'Finition',options:'Options',frais_annexes:'Frais annexes'};
+const CAT_COMPTA={travaux:'Travaux',meubles:'Meubles',recettes:'Recette',autre:'Autre'};
+
+function reelDuPoste(bien,posteId){
+  return (bien.travauxCompta||[]).filter(c=>c.posteId===posteId).reduce((a,c)=>a+c.montant,0);
+}
+
+function renderBienTravaux(c,bien){
+  const sub=APP.state.ui['trav_'+bien.id]||'previ';
+  c.innerHTML=`
+    <div class="tabs">
+      <div class="tab ${sub==='previ'?'active':''}" onclick="setTravTab('${bien.id}','previ')">📋 Budget prévisionnel</div>
+      <div class="tab ${sub==='compta'?'active':''}" onclick="setTravTab('${bien.id}','compta')">💰 Paiements réels</div>
+      <div class="tab ${sub==='bilan'?'active':''}" onclick="setTravTab('${bien.id}','bilan')">📊 Bilan</div>
+    </div>
+    <div id="travContent"></div>`;
+  const t=document.getElementById('travContent');
+  if(sub==='previ') renderTravPrevi(t,bien);
+  else if(sub==='compta') renderTravCompta(t,bien);
+  else renderTravBilan(t,bien);
+}
+function setTravTab(bienId,tab){ APP.state.ui['trav_'+bienId]=tab; localStorage.setItem(APP.LS_KEY,JSON.stringify(APP.state)); renderAll(); }
+
+function renderTravPrevi(t,bien){
+  let rows='',totHT=0,totTTC=0,totReel=0;
+  for(const p of bien.travauxPrevi||[]){
+    const reel=reelDuPoste(bien,p.id);
+    const ecart=p.prixTTC-reel;
+    totHT+=p.prixHT; totTTC+=p.prixTTC; totReel+=reel;
+    rows+=`<tr>
+      <td><input value="${esc(p.poste)}" onchange="updPrevi('${bien.id}','${p.id}','poste',this.value)"></td>
+      <td><input value="${esc(p.intervenant||'')}" onchange="updPrevi('${bien.id}','${p.id}','intervenant',this.value)"></td>
+      <td><select onchange="updPrevi('${bien.id}','${p.id}','categorie',this.value)">${Object.entries(CAT_TRAVAUX).map(([k,v])=>`<option value="${k}" ${p.categorie===k?'selected':''}>${v}</option>`).join('')}</select></td>
+      <td class="tr-right"><input type="number" step="0.01" value="${p.prixHT}" style="text-align:right" onchange="updPrevi('${bien.id}','${p.id}','prixHT',parseFloat(this.value))"></td>
+      <td class="tr-right"><input type="number" step="0.01" value="${p.prixTTC}" style="text-align:right" onchange="updPrevi('${bien.id}','${p.id}','prixTTC',parseFloat(this.value))"></td>
+      <td class="tr-right num" style="font-weight:600">${fmtEUR(reel,2)}</td>
+      <td class="tr-right num" style="font-weight:700;color:${ecart>=0?'var(--green)':'var(--red)'}">${fmtEUR(ecart,0)}</td>
+      <td><button class="btn btn-icon btn-danger" onclick="delPrevi('${bien.id}','${p.id}')">🗑️</button></td></tr>`;
+  }
+  t.innerHTML=`
+    <div class="spread mb"><div class="sec-title" style="margin:0">📋 Postes prévisionnels</div>
+    <button class="btn btn-sm" onclick="addPrevi('${bien.id}')">＋ Poste</button></div>
+    <div class="card scroll-wrap"><table class="tbl">
+    <thead><tr><th>Poste</th><th>Intervenant</th><th>Catégorie</th><th class="tr-right">HT</th><th class="tr-right">TTC</th><th class="tr-right">Payé réel <span class="tt"><span class="tt-i">i</span><span class="tt-c">Somme des lignes de paiements réels rattachées à ce poste (colonne "Poste budget" de l'onglet Paiements réels).</span></span></th><th class="tr-right">Écart</th><th></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="8" class="empty">Aucun poste budgété</td></tr>'}</tbody>
+    <tfoot><tr><td colspan="3" class="tr-right">TOTAUX</td><td class="tr-right num">${fmtEUR(totHT)}</td><td class="tr-right num">${fmtEUR(totTTC)}</td><td class="tr-right num">${fmtEUR(totReel)}</td><td class="tr-right num" style="color:${totTTC-totReel>=0?'var(--green)':'var(--red)'}">${fmtEUR(totTTC-totReel)}</td><td></td></tr></tfoot>
+    </table></div>
+    <p style="font-size:11.5px;color:var(--muted)">💡 Le "payé réel" se calcule via le rattachement manuel des lignes de paiement à un poste (fini le rapprochement approximatif par mots-clés).</p>`;
+}
+function updPrevi(bienId,id,f,v){ const b=bienById(bienId); const p=b.travauxPrevi.find(x=>x.id===id); if(p){p[f]=v;saveLocal();renderAll();} }
+function addPrevi(bienId){ const b=bienById(bienId); (b.travauxPrevi=b.travauxPrevi||[]).push({id:uid('p'),poste:'Nouveau poste',intervenant:'',prixHT:0,prixTTC:0,categorie:'finition'}); saveLocal(); renderAll(); }
+async function delPrevi(bienId,id){
+  if(!await confirmModal({title:'Supprimer ce poste ?',body:'Les paiements réels rattachés ne seront pas supprimés.'})) return;
+  const b=bienById(bienId); b.travauxPrevi=b.travauxPrevi.filter(p=>p.id!==id); saveLocal(); renderAll();
+}
+
+function renderTravCompta(t,bien){
+  const search=(APP._travSearch||'').toLowerCase();
+  const list=(bien.travauxCompta||[]).filter(c=>!search||c.poste.toLowerCase().includes(search)).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  let rows='',tot=0,tA=0,tV=0;
+  const posteOpts=p=>`<option value="">— libre —</option>`+(bien.travauxPrevi||[]).map(x=>`<option value="${x.id}" ${p===x.id?'selected':''}>${esc(x.poste.slice(0,28))}</option>`).join('');
+  for(const cl of list){
+    const pa=cl.partArmand??bien.quoteParts.armand, pv=cl.partVictoria??bien.quoteParts.victoria;
+    const vA=cl.montant*pa/100, vV=cl.montant*pv/100;
+    tot+=cl.montant; tA+=vA; tV+=vV;
+    rows+=`<tr>
+      <td><input type="date" value="${cl.date}" onchange="updCompta('${bien.id}','${cl.id}','date',this.value)"></td>
+      <td><input value="${esc(cl.poste)}" onchange="updCompta('${bien.id}','${cl.id}','poste',this.value)"></td>
+      <td><select onchange="updCompta('${bien.id}','${cl.id}','categorie',this.value)">${Object.entries(CAT_COMPTA).map(([k,v])=>`<option value="${k}" ${cl.categorie===k?'selected':''}>${v}</option>`).join('')}</select></td>
+      <td><select onchange="updCompta('${bien.id}','${cl.id}','posteId',this.value||null)">${posteOpts(cl.posteId)}</select></td>
+      <td class="tr-right"><input type="number" step="0.01" value="${cl.montant}" style="text-align:right" onchange="updCompta('${bien.id}','${cl.id}','montant',parseFloat(this.value))"></td>
+      <td class="tr-right num" style="color:${P1().couleur}">${fmtEUR(vA,2)}</td>
+      <td class="tr-right num" style="color:${P2().couleur}">${fmtEUR(vV,2)}</td>
+      <td><div class="row" style="gap:3px;flex-wrap:nowrap"><input type="number" min="0" max="100" value="${pa}" style="width:48px;text-align:center" onchange="updComptaPart('${bien.id}','${cl.id}',parseFloat(this.value))">/<span class="num" style="font-size:11px">${pv}</span></div></td>
+      <td><button class="btn btn-icon btn-danger" onclick="delCompta('${bien.id}','${cl.id}')">🗑️</button></td></tr>`;
+  }
+  t.innerHTML=`
+    <div class="spread mb">
+      <div class="sec-title" style="margin:0">💰 Paiements réels <span class="badge b-grey">${list.length} lignes</span></div>
+      <div class="row">
+        <input placeholder="🔎 Rechercher…" value="${esc(APP._travSearch||'')}" oninput="APP._travSearch=this.value;renderAll()" style="width:160px">
+        <button class="btn btn-sm btn-p" onclick="addCompta('${bien.id}')">＋ Ligne</button>
+      </div>
+    </div>
+    <div class="card scroll-wrap" style="max-height:60vh;overflow-y:auto"><table class="tbl">
+    <thead><tr><th>Date</th><th>Libellé</th><th>Cat.</th><th>Poste budget</th><th class="tr-right">Montant</th><th class="tr-right">${esc(P1().nom.split(' ')[0])}</th><th class="tr-right">${esc(P2().nom.split(' ')[0])}</th><th>% ${esc(P1().nom[0])}/${esc(P2().nom[0])}</th><th></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="9" class="empty">Aucun paiement</td></tr>'}</tbody>
+    <tfoot><tr><td colspan="4" class="tr-right">TOTAUX</td><td class="tr-right num">${fmtEUR(tot,2)}</td><td class="tr-right num">${fmtEUR(tA,2)}</td><td class="tr-right num">${fmtEUR(tV,2)}</td><td colspan="2"></td></tr></tfoot>
+    </table></div>
+    <p style="font-size:11.5px;color:var(--muted)">💡 Répartition par défaut <b>${bien.quoteParts.armand}/${bien.quoteParts.victoria}</b>, modifiable ligne par ligne. Montants négatifs = recettes/remboursements.</p>`;
+}
+function updCompta(bienId,id,f,v){ const b=bienById(bienId); const cl=b.travauxCompta.find(x=>x.id===id); if(cl){cl[f]=v;saveLocal();renderAll();} }
+function updComptaPart(bienId,id,v){ const b=bienById(bienId); const cl=b.travauxCompta.find(x=>x.id===id); if(cl){cl.partArmand=v;cl.partVictoria=100-v;saveLocal();renderAll();} }
+function addCompta(bienId){ const b=bienById(bienId); (b.travauxCompta=b.travauxCompta||[]).push({id:uid('c'),date:new Date().toISOString().slice(0,10),poste:'Nouvelle dépense',montant:0,partArmand:b.quoteParts.armand,partVictoria:b.quoteParts.victoria,categorie:'travaux',posteId:null}); saveLocal(); renderAll(); }
+async function delCompta(bienId,id){
+  if(!await confirmModal({title:'Supprimer cette ligne ?',body:'Les cumuls seront recalculés.'})) return;
+  const b=bienById(bienId); b.travauxCompta=b.travauxCompta.filter(c=>c.id!==id); saveLocal(); renderAll();
+}
+
+function renderTravBilan(t,bien){
+  const previ=bien.travauxPrevi||[], compta=bien.travauxCompta||[];
+  const totBudget=previ.reduce((a,p)=>a+p.prixTTC,0);
+  const totReel=compta.reduce((a,c)=>a+c.montant,0);
+  const totMeubles=compta.filter(c=>c.categorie==='meubles').reduce((a,c)=>a+c.montant,0);
+  const totRecettes=compta.filter(c=>c.montant<0).reduce((a,c)=>a+c.montant,0);
+  // Ventilation par catégorie : budget vs réel rattaché
+  const cats={};
+  for(const [k,label] of Object.entries(CAT_TRAVAUX)) cats[k]={label,budget:0,reel:0};
+  for(const p of previ){ if(cats[p.categorie]) {cats[p.categorie].budget+=p.prixTTC; cats[p.categorie].reel+=reelDuPoste(bien,p.id);} }
+  const reelNonRattache=compta.filter(c=>!c.posteId&&c.categorie==='travaux').reduce((a,c)=>a+c.montant,0);
+  const coutAcq=(bien.prixAchat||0)+(bien.fraisNotaire||0);
+  const coutProjet=coutAcq+totReel;
+  const plafond=bien.plafondProjet||0;
+
+  t.innerHTML=`
+    <div class="grid g4 mb">
+      <div class="card card-p"><div class="kpi-label">Budget total TTC</div><div class="kpi-value num" style="font-size:20px">${fmtEUR(totBudget)}</div></div>
+      <div class="card card-p"><div class="kpi-label">Payé réel (net)</div><div class="kpi-value num" style="font-size:20px;color:var(--amber)">${fmtEUR(totReel)}</div><div class="kpi-sub">dont recettes ${fmtEUR(totRecettes)}</div></div>
+      <div class="card card-p"><div class="kpi-label">Meubles & déco</div><div class="kpi-value num" style="font-size:20px;color:var(--blue)">${fmtEUR(totMeubles)}</div></div>
+      <div class="card card-p"><div class="kpi-label">Reste vs budget</div><div class="kpi-value num" style="font-size:20px;color:${totBudget-totReel>=0?'var(--green)':'var(--red)'}">${fmtEUR(totBudget-totReel)}</div></div>
+    </div>
+    ${plafond?`<div class="card card-p mb">
+      <div class="sec-title">🎯 Coût projet vs plafond</div>
+      <table class="tbl">
+        <tr><td>Acquisition (prix + notaire)</td><td class="tr-right num">${fmtEUR(coutAcq)}</td></tr>
+        <tr><td>Travaux + meubles réels</td><td class="tr-right num">${fmtEUR(totReel)}</td></tr>
+        <tr><td style="font-weight:700">Coût projet total</td><td class="tr-right num" style="font-weight:800">${fmtEUR(coutProjet)}</td></tr>
+        <tr><td style="color:var(--muted)">Plafond fixé</td><td class="tr-right num">${fmtEUR(plafond)}</td></tr>
+      </table>
+      <div class="pbar mt"><div class="pfill ${coutProjet>plafond?'red':coutProjet>plafond*0.95?'amber':''}" style="width:${Math.min(100,coutProjet/plafond*100)}%"></div></div>
+      <div style="font-size:11.5px;margin-top:5px;${coutProjet>plafond?'color:var(--red);font-weight:700':'color:var(--muted)'}">${fmtPct(coutProjet/plafond*100,1)} du plafond ${coutProjet>plafond?'— DÉPASSEMENT '+fmtEUR(coutProjet-plafond):''}</div>
+    </div>`:''}
+    <div class="grid g2">
+      <div class="card card-p">
+        <div class="sec-title">📊 Budget vs réel par catégorie</div>
+        <div class="chart-box" style="height:230px"><canvas id="chCat"></canvas></div>
+        ${reelNonRattache?`<p style="font-size:11px;color:var(--amber);margin:8px 0 0">⚠️ ${fmtEUR(reelNonRattache)} de paiements "travaux" non rattachés à un poste budget.</p>`:''}
+      </div>
+      <div class="card card-p">
+        <div class="sec-title">🧾 Détail par catégorie</div>
+        <table class="tbl"><thead><tr><th>Catégorie</th><th class="tr-right">Budget</th><th class="tr-right">Réel rattaché</th><th class="tr-right">Écart</th></tr></thead><tbody>
+        ${Object.values(cats).map(x=>`<tr><td style="font-weight:600">${x.label}</td><td class="tr-right num">${fmtEUR(x.budget)}</td><td class="tr-right num">${fmtEUR(x.reel)}</td><td class="tr-right num" style="color:${x.budget-x.reel>=0?'var(--green)':'var(--red)'}">${fmtEUR(x.budget-x.reel)}</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+    </div>`;
+
+  if(CHART_OK()){
+    APP.charts.cat=new Chart(document.getElementById('chCat'),{type:'bar',
+      data:{labels:Object.values(cats).map(x=>x.label),datasets:[
+        {label:'Budget TTC',data:Object.values(cats).map(x=>x.budget),backgroundColor:'rgba(37,99,235,.55)',borderRadius:5},
+        {label:'Réel rattaché',data:Object.values(cats).map(x=>x.reel),backgroundColor:'rgba(15,118,110,.75)',borderRadius:5}]},
+      options:{...chartBase,scales:{y:{ticks:{callback:eurTick,font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
+  }
+}
+
+// =====================================================================
+// CHARGES COURANTES
+// =====================================================================
+const TYPE_CHARGES={taxe_fonciere:['🏛️','Taxe foncière'],copro:['🏢','Copropriété'],electricite:['⚡','Électricité'],eau:['💧','Eau'],internet:['📡','Internet'],gaz:['🔥','Gaz'],assurance_habitation:['🛡️','Assurance hab.'],autre:['📌','Autre']};
+function renderBienCharges(c,bien){
+  const charges=bien.chargesRecurrentes||[];
+  const byType={};
+  for(const ch of charges){ byType[ch.type]=byType[ch.type]||{total:0,count:0,last:null}; byType[ch.type].total+=ch.montant; byType[ch.type].count++;
+    if(!byType[ch.type].last||new Date(ch.date)>new Date(byType[ch.type].last)) byType[ch.type].last=ch.date; }
+  const y=new Date().getFullYear();
+  const totalAnnee=charges.filter(ch=>new Date(ch.date).getFullYear()===y).reduce((a,ch)=>a+ch.montant,0);
+  let rows='';
+  for(const ch of [...charges].sort((a,b)=>new Date(b.date)-new Date(a.date))){
+    rows+=`<tr>
+      <td><input type="date" value="${ch.date}" onchange="updCharge('${bien.id}','${ch.id}','date',this.value)"></td>
+      <td><select onchange="updCharge('${bien.id}','${ch.id}','type',this.value)">${Object.entries(TYPE_CHARGES).map(([k,v])=>`<option value="${k}" ${ch.type===k?'selected':''}>${v[0]} ${v[1]}</option>`).join('')}</select></td>
+      <td><input value="${esc(ch.libelle||'')}" placeholder="ex : facture février" onchange="updCharge('${bien.id}','${ch.id}','libelle',this.value)"></td>
+      <td class="tr-right"><input type="number" step="0.01" value="${ch.montant}" style="text-align:right" onchange="updCharge('${bien.id}','${ch.id}','montant',parseFloat(this.value))"></td>
+      <td><div class="row" style="gap:3px;flex-wrap:nowrap"><input type="number" min="0" max="100" value="${ch.partArmand??100}" style="width:48px;text-align:center" onchange="updChargePart('${bien.id}','${ch.id}',parseFloat(this.value))">/<span class="num" style="font-size:11px">${ch.partVictoria??0}</span></div></td>
+      <td><button class="btn btn-icon btn-danger" onclick="delCharge('${bien.id}','${ch.id}')">🗑️</button></td></tr>`;
+  }
+  c.innerHTML=`
+    <div class="grid g4 mb">
+      ${Object.entries(byType).slice(0,3).map(([k,d])=>`<div class="card card-p"><div class="kpi-label">${TYPE_CHARGES[k]?.[0]||'📌'} ${TYPE_CHARGES[k]?.[1]||k}</div><div class="kpi-value num" style="font-size:19px">${fmtEUR(d.total,0)}</div><div class="kpi-sub">${d.count} paiement(s) · dernier ${fmtDate(d.last)}</div></div>`).join('')}
+      <div class="card card-p"><div class="kpi-label">Total ${y}</div><div class="kpi-value num" style="font-size:19px;color:var(--amber)">${fmtEUR(totalAnnee,0)}</div><div class="kpi-sub">toutes charges</div></div>
+    </div>
+    <div class="spread mb"><div class="sec-title" style="margin:0">🧾 Charges courantes</div><button class="btn btn-sm btn-p" onclick="addChargeLine('${bien.id}')">＋ Charge</button></div>
+    <div class="card scroll-wrap"><table class="tbl">
+    <thead><tr><th>Date</th><th>Type</th><th>Libellé</th><th class="tr-right">Montant</th><th>% ${esc(P1().nom[0])}/${esc(P2().nom[0])}</th><th></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="6" class="empty">Aucune charge — utilise ＋ Charge ou le bouton ＋ Ajouter global</td></tr>'}</tbody></table></div>`;
+}
+function updCharge(bienId,id,f,v){ const b=bienById(bienId); const ch=b.chargesRecurrentes.find(x=>x.id===id); if(ch){ch[f]=v;saveLocal();renderAll();} }
+function updChargePart(bienId,id,v){ const b=bienById(bienId); const ch=b.chargesRecurrentes.find(x=>x.id===id); if(ch){ch.partArmand=v;ch.partVictoria=100-v;saveLocal();renderAll();} }
+function addChargeLine(bienId){ const b=bienById(bienId); (b.chargesRecurrentes=b.chargesRecurrentes||[]).push({id:uid('ch'),date:new Date().toISOString().slice(0,10),type:'electricite',libelle:'',montant:0,partArmand:100,partVictoria:0}); saveLocal(); renderAll(); }
+async function delCharge(bienId,id){
+  if(!await confirmModal({title:'Supprimer cette charge ?',body:'Elle sera retirée des cumuls.'})) return;
+  const b=bienById(bienId); b.chargesRecurrentes=b.chargesRecurrentes.filter(c=>c.id!==id); saveLocal(); renderAll();
+}
+
+// =====================================================================
+// VALORISATION
+// =====================================================================
+function renderBienValo(c,bien){
+  bien.valorisation=bien.valorisation||{manuelle:[],prixM2:[]};
+  const ym=APP.state.ui.period;
+  const v=bienValeur(bien,ym);
+  const ecart=v.manuelle-v.m2, ecartPct=v.m2>0?ecart/v.m2*100:0;
+  const man=[...bien.valorisation.manuelle].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const m2s=[...bien.valorisation.prixM2].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  c.innerHTML=`
+    <div class="grid g3 mb">
+      <div class="card card-p"><div class="kpi-label">Estimation retenue <span class="tt"><span class="tt-i">i</span><span class="tt-c">Valeur saisie manuellement (MeilleursAgents, agent immo…). Utilisée dans tous les KPI.</span></span></div>
+        <div class="kpi-value num" style="color:var(--teal)">${fmtEUR(v.manuelle)}</div>
+        <div class="kpi-sub">${bien.surface?fmtEUR(v.manuelle/bien.surface,0)+' /m²':''}</div></div>
+      <div class="card card-p"><div class="kpi-label">Estimation marché (m²)</div>
+        <div class="kpi-value num" style="color:var(--blue)">${fmtEUR(v.m2)}</div>
+        <div class="kpi-sub">${bien.surface||'—'} m² × prix médian saisi</div></div>
+      <div class="card card-p"><div class="kpi-label">Écart</div>
+        <div class="kpi-value num" style="color:${ecart>=0?'var(--green)':'var(--red)'}">${ecart>=0?'+':''}${fmtEUR(ecart)}</div>
+        <div class="kpi-sub">${fmtPct(ecartPct)}</div></div>
+    </div>
+    <div class="card card-p mb"><div class="sec-title">📈 Historique des estimations</div>
+      <div class="chart-box" style="height:200px"><canvas id="chValo"></canvas></div></div>
+    <div class="grid g2">
+      <div class="card card-p">
+        <div class="spread mb"><div class="sec-title" style="margin:0">📝 Estimations manuelles</div><button class="btn btn-sm" onclick="addValo('${bien.id}','manuelle')">＋</button></div>
+        <table class="tbl"><thead><tr><th>Date</th><th class="tr-right">Valeur</th><th>Source</th><th></th></tr></thead><tbody>
+        ${man.map((x,i)=>`<tr>
+          <td><input type="date" value="${x.date}" onchange="updValo('${bien.id}','manuelle',${i},'date',this.value)"></td>
+          <td class="tr-right"><input type="number" step="500" value="${x.valeur}" style="text-align:right" onchange="updValo('${bien.id}','manuelle',${i},'valeur',parseFloat(this.value))"></td>
+          <td><input value="${esc(x.source||'')}" onchange="updValo('${bien.id}','manuelle',${i},'source',this.value)"></td>
+          <td><button class="btn btn-icon btn-danger" onclick="delValo('${bien.id}','manuelle',${i})">🗑️</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Aucune</td></tr>'}
+        </tbody></table>
+      </div>
+      <div class="card card-p">
+        <div class="spread mb"><div class="sec-title" style="margin:0">📐 Prix m² du quartier</div><button class="btn btn-sm" onclick="addValo('${bien.id}','prixM2')">＋</button></div>
+        <table class="tbl"><thead><tr><th>Date</th><th class="tr-right">€/m²</th><th class="tr-right">Valeur</th><th>Source</th><th></th></tr></thead><tbody>
+        ${m2s.map((x,i)=>`<tr>
+          <td><input type="date" value="${x.date}" onchange="updValo('${bien.id}','prixM2',${i},'date',this.value)"></td>
+          <td class="tr-right"><input type="number" step="10" value="${x.valeur}" style="text-align:right" onchange="updValo('${bien.id}','prixM2',${i},'valeur',parseFloat(this.value))"></td>
+          <td class="tr-right num" style="font-weight:600">${fmtEUR(x.valeur*(bien.surface||0))}</td>
+          <td><input value="${esc(x.source||'')}" onchange="updValo('${bien.id}','prixM2',${i},'source',this.value)"></td>
+          <td><button class="btn btn-icon btn-danger" onclick="delValo('${bien.id}','prixM2',${i})">🗑️</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Aucune</td></tr>'}
+        </tbody></table>
+        <div class="row mt" style="font-size:11.5px">
+          <a href="https://www.meilleursagents.com/estimation-immobiliere/" target="_blank" class="btn btn-sm">MeilleursAgents</a>
+          <a href="https://app.dvf.etalab.gouv.fr/" target="_blank" class="btn btn-sm">DVF (ventes réelles)</a>
+          <a href="https://www.seloger.com/prix-de-l-immo/vente.htm" target="_blank" class="btn btn-sm">SeLoger prix m²</a>
+        </div>
+      </div>
+    </div>`;
+  if(CHART_OK()&&(man.length||m2s.length)){
+    const allDates=[...new Set([...man.map(x=>x.date),...m2s.map(x=>x.date)])].sort();
+    APP.charts.valo=new Chart(document.getElementById('chValo'),{type:'line',
+      data:{labels:allDates.map(d=>fmtDate(d)),datasets:[
+        {label:'Estimation manuelle',data:allDates.map(d=>{const f=man.filter(x=>x.date<=d);return f.length?f[f.length-1].valeur:null;}),borderColor:'#0f766e',tension:.25,spanGaps:true,borderWidth:2.5},
+        {label:'Marché (m²)',data:allDates.map(d=>{const f=m2s.filter(x=>x.date<=d);return f.length?f[f.length-1].valeur*(bien.surface||0):null;}),borderColor:'#2563eb',borderDash:[5,4],tension:.25,spanGaps:true,borderWidth:2}]},
+      options:{...chartBase,scales:{y:{ticks:{callback:eurTick,font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
+  }
+}
+function addValo(bienId,mode){
+  const b=bienById(bienId);
+  b.valorisation[mode].push({date:new Date().toISOString().slice(0,10),valeur:mode==='manuelle'?(b.prixAchat||0):3000,source:'À renseigner'});
+  saveLocal(); renderAll();
+}
+function updValo(bienId,mode,i,f,v){
+  const b=bienById(bienId);
+  const arr=[...b.valorisation[mode]].sort((a,x)=>new Date(a.date)-new Date(x.date));
+  arr[i][f]=v; b.valorisation[mode]=arr; saveLocal(); renderAll();
+}
+async function delValo(bienId,mode,i){
+  if(!await confirmModal({title:'Supprimer cette estimation ?',body:''})) return;
+  const b=bienById(bienId);
+  const arr=[...b.valorisation[mode]].sort((a,x)=>new Date(a.date)-new Date(x.date));
+  arr.splice(i,1); b.valorisation[mode]=arr; saveLocal(); renderAll();
+}
+// =====================================================================
+// LOCATIF (LMNP)
+// =====================================================================
+const OCC_STATES={loue:['#12b76a','Loué'],vacant:['#98a2b3','Vacant'],travaux:['#f79009','Travaux'],entree:['#2563eb','Entrée'],sortie:['#f04438','Sortie']};
+const OCC_CYCLE=['vacant','loue','travaux','entree','sortie'];
+
+function renderBienLocatif(c,bien){
+  const L=bien.locatif;
+  const cf=lmnpCashflow(bien);
+  const invest=lmnpInvestTotal(bien);
+  const rdtBrut=invest>0?(L.loyerHC*12)/invest*100:0;
+  const rdtNet=invest>0?((L.loyerHC*12)-lmnpChargesAnnuelles(bien))/invest*100:0;
+  const y=L.suiviYear||new Date().getFullYear();
+  if(!L.suivi[y]) L.suivi[y]=Array(12).fill().map(()=>({s:'vacant',l:'',n:''}));
+  const grid=L.suivi[y];
+  const perc=grid.reduce((a,m)=>a+(parseFloat(m.l)||0),0);
+  const loues=grid.filter(m=>m.s==='loue').length;
+  const cfeSeuil=L.loyerHC*12>5000;
+  const loyersSaisis=[...(L.loyers||[])].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,12);
+
+  c.innerHTML=`
+    <div class="grid g4 mb">
+      <div class="card card-p"><div class="kpi-label">Cash-flow mensuel <span class="tt"><span class="tt-i">i</span><span class="tt-c">Loyer HC − mensualité crédit (avec assurance) − charges annuelles ÷ 12.</span></span></div>
+        <div class="kpi-value num" style="color:${cf.cfMois>=0?'var(--green)':'var(--red)'}">${cf.cfMois>=0?'+':''}${fmtEUR(cf.cfMois,0)}</div>
+        <div class="kpi-sub">${fmtEUR(cf.cfAn,0)}/an</div></div>
+      <div class="card card-p"><div class="kpi-label">Rendement brut</div>
+        <div class="kpi-value num" style="color:var(--teal)">${fmtPct(rdtBrut,2)}</div>
+        <div class="kpi-sub">loyers ${fmtEUR(L.loyerHC*12,0)} / investi ${fmtEUR(invest,0)}</div></div>
+      <div class="card card-p"><div class="kpi-label">Rendement net de charges</div>
+        <div class="kpi-value num" style="color:var(--blue)">${fmtPct(rdtNet,2)}</div>
+        <div class="kpi-sub">avant impôt et crédit</div></div>
+      <div class="card card-p"><div class="kpi-label">Occupation ${y}</div>
+        <div class="kpi-value num">${loues}/12</div>
+        <div class="kpi-sub">perçu : ${fmtEUR(perc,0)}</div></div>
+    </div>
+
+    ${cfeSeuil?`<div class="hero-banner hb-amber mb">🏷️ Loyer annuel ${fmtEUR(L.loyerHC*12,0)} &gt; 5 000 € → <b>CFE due</b> dès N+2 (déclaration 1447-C avant le 31/12 de la 1ʳᵉ année). Pour l'éviter : loyer ≤ 416 €/mois.</div>`
+    :`<div class="hero-banner hb-teal mb">✅ Loyer annuel ${fmtEUR(L.loyerHC*12,0)} ≤ 5 000 € → exonération de CFE (base minimale).</div>`}
+
+    <div class="grid mb" style="grid-template-columns:1fr 1fr">
+      <div class="card card-p">
+        <div class="sec-title">⚙️ Paramètres locatifs</div>
+        <div class="grid g2">
+          <div><label class="fl">Loyer mensuel HC €</label><input type="number" value="${L.loyerHC}" onchange="updLocatif('${bien.id}','loyerHC',parseFloat(this.value))" style="width:100%"></div>
+          <div><label class="fl">Charges récup. €/mois</label><input type="number" value="${L.chargesRecup||0}" onchange="updLocatif('${bien.id}','chargesRecup',parseFloat(this.value))" style="width:100%"></div>
+          <div><label class="fl">Locataire</label><input value="${esc(L.locataire||'')}" onchange="updLocatif('${bien.id}','locataire',this.value)" style="width:100%"></div>
+          <div><label class="fl">Début du bail</label><input type="date" value="${L.bailDebut||''}" onchange="updLocatif('${bien.id}','bailDebut',this.value)" style="width:100%"></div>
+        </div>
+        <div class="sec-title mt">🧾 Charges annuelles d'exploitation</div>
+        <table class="tbl">
+          ${[['tf','Taxe foncière'],['cp','Copropriété'],['pno','Assurance PNO'],['gli','GLI (impayés)'],['cfe','CFE'],['ent','Entretien']].map(([k,lab])=>`
+          <tr><td>${lab}${k==='cfe'&&!cfeSeuil?' <span class="badge b-green">exonéré</span>':''}</td>
+          <td class="tr-right" style="width:110px"><input type="number" value="${L.chargesAnnuelles[k]||0}" style="text-align:right;width:100%" onchange="updLocatifCharge('${bien.id}','${k}',parseFloat(this.value))"></td></tr>`).join('')}
+          <tr><td style="font-weight:700">Total retenu</td><td class="tr-right num" style="font-weight:800">${fmtEUR(lmnpChargesAnnuelles(bien),0)}/an</td></tr>
+        </table>
+      </div>
+      <div class="card card-p">
+        <div class="sec-title">🎛️ Simulateur de loyer</div>
+        <input type="range" min="300" max="700" step="5" value="${L.loyerHC}" style="width:100%" oninput="simLoyer('${bien.id}',this.value)">
+        <div id="simOut" class="mt"></div>
+        <div class="chart-box mt" style="height:190px"><canvas id="chCF"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card card-p mb">
+      <div class="spread mb">
+        <div class="sec-title" style="margin:0">🗓️ Suivi d'occupation</div>
+        <div class="row">${Object.keys(L.suivi).sort().map(yy=>`<button class="btn btn-sm ${+yy===y?'btn-p':''}" onclick="setSuiviYear('${bien.id}',${yy})">${yy}</button>`).join('')}</div>
+      </div>
+      <div class="heat mb">${grid.map((m,i)=>`<div class="heat-cell" style="background:${OCC_STATES[m.s][0]}" title="${MONTHS_FR[i]} — ${OCC_STATES[m.s][1]}${m.l?' · '+m.l+'€':''}" onclick="cycleOcc('${bien.id}',${y},${i})">${MONTHS_FR[i].slice(0,1).toUpperCase()}</div>`).join('')}</div>
+      <div class="row" style="font-size:11px;color:var(--muted)">${Object.entries(OCC_STATES).map(([k,v])=>`<span><span class="legend-dot" style="background:${v[0]}"></span>${v[1]}</span>`).join(' ')}
+        <span style="margin-left:auto">clic = changer le statut</span></div>
+    </div>
+
+    <div class="card card-p">
+      <div class="spread mb"><div class="sec-title" style="margin:0">💶 Loyers encaissés</div>
+      <button class="btn btn-sm btn-p" onclick="quickAddLine('loyer')">＋ Encaissement</button></div>
+      <table class="tbl"><thead><tr><th>Date</th><th>Note</th><th class="tr-right">Montant</th><th></th></tr></thead><tbody>
+      ${loyersSaisis.map(l=>`<tr><td>${fmtDate(l.date)}</td><td>${esc(l.note||'')}</td><td class="tr-right num" style="font-weight:600;color:var(--green)">${fmtEUR(l.montant,2)}</td>
+        <td><button class="btn btn-icon btn-danger" onclick="delLoyer('${bien.id}','${l.id}')">🗑️</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Aucun loyer saisi — dès la mise en location, saisis chaque encaissement ici</td></tr>'}
+      </tbody></table>
+    </div>`;
+
+  simLoyer(bien.id, L.loyerHC, true);
+  if(CHART_OK()){
+    // cash-flow cumulé 20 ans
+    const pts=[]; let cum=0;
+    for(let yr=1;yr<=20;yr++){ cum+=cf.cfAn; pts.push(cum); }
+    APP.charts.cf=new Chart(document.getElementById('chCF'),{type:'bar',
+      data:{labels:pts.map((_,i)=>'A'+(i+1)),datasets:[{label:'Trésorerie cumulée',data:pts,backgroundColor:pts.map(v=>v>=0?'rgba(18,183,106,.65)':'rgba(240,68,56,.65)'),borderRadius:4}]},
+      options:{...chartBase,scales:{y:{ticks:{callback:eurTick,font:{size:10}}},x:{ticks:{font:{size:9},maxTicksLimit:10}}}}});
+  }
+}
+function updLocatif(bienId,f,v){ const b=bienById(bienId); b.locatif[f]=v; saveLocal(); renderAll(); }
+function updLocatifCharge(bienId,k,v){ const b=bienById(bienId); b.locatif.chargesAnnuelles[k]=v||0; saveLocal(); renderAll(); }
+function setSuiviYear(bienId,y){ const b=bienById(bienId); b.locatif.suiviYear=y; saveLocal(); renderAll(); }
+function cycleOcc(bienId,y,i){
+  const b=bienById(bienId); const cell=b.locatif.suivi[y][i];
+  cell.s=OCC_CYCLE[(OCC_CYCLE.indexOf(cell.s)+1)%OCC_CYCLE.length];
+  if(cell.s==='loue'&&!cell.l) cell.l=String(b.locatif.loyerHC||'');
+  saveLocal(); renderAll();
+}
+function delLoyer(bienId,id){ const b=bienById(bienId); b.locatif.loyers=b.locatif.loyers.filter(l=>l.id!==id); saveLocal(); renderAll(); }
+function simLoyer(bienId,val,init){
+  const b=bienById(bienId); const L=b.locatif;
+  const loyer=parseFloat(val);
+  let mens=0; for(const p of b.prets||[]) mens+=(p.mensualiteAvecAssurance||p.mensualiteCapInteret||0);
+  let ch=0; for(const [k,v] of Object.entries(L.chargesAnnuelles)){ if(k==='cfe'&&loyer*12<=5000) continue; ch+=v||0; }
+  const cfm=loyer-mens-ch/12;
+  const el=document.getElementById('simOut');
+  if(el) el.innerHTML=`
+    <div class="spread"><span style="font-size:13px">Loyer simulé : <b class="num">${fmtEUR(loyer,0)}/mois</b> ${loyer*12>5000?'<span class="badge b-amber">CFE due</span>':'<span class="badge b-green">pas de CFE</span>'}</span>
+    <span class="num" style="font-size:17px;font-weight:800;color:${cfm>=0?'var(--green)':'var(--red)'}">${cfm>=0?'+':''}${fmtEUR(cfm,0)}/mois</span></div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:4px">= ${fmtEUR(loyer,0)} − crédit ${fmtEUR(mens,0)} − charges ${fmtEUR(ch/12,0)} · soit ${fmtEUR(cfm*12,0)}/an</div>
+    ${!init&&loyer!==L.loyerHC?`<button class="btn btn-sm mt" onclick="updLocatif('${bienId}','loyerHC',${loyer})">Adopter ce loyer</button>`:''}`;
+}
+
+// =====================================================================
+// FISCALITÉ LMNP
+// =====================================================================
+function renderBienFiscal(c,bien){
+  const L=bien.locatif;
+  const f=lmnpFiscal(bien);
+  const am=f.amort;
+  const rows=[];
+  const dureeAff=Math.max(L.amort.durb||30, L.amort.durm||7);
+  for(let yr=1;yr<=Math.min(dureeAff,12);yr++){
+    const a=lmnpAmortAnnuel(bien,yr);
+    rows.push(`<tr><td class="num">Année ${yr}</td><td class="tr-right num">${fmtEUR(a.bati,0)}</td><td class="tr-right num">${a.mob?fmtEUR(a.mob,0):'—'}</td><td class="tr-right num" style="font-weight:600">${fmtEUR(a.total,0)}</td></tr>`);
+  }
+  const tmi=APP.state.ui.tmi??30;
+  const ps=17.2;
+  const impMicro=f.baseMicro*(tmi+ps)/100;
+  const impReel=f.baseReel*(tmi+ps)/100;
+
+  c.innerHTML=`
+    <div class="hero-banner hb-teal mb">⚖️ Régime déclaré : <b>${L.regime==='reel'?'Réel simplifié (BIC)':'Micro-BIC (abattement 50 %)'}</b>
+      <button class="btn btn-sm" style="margin-left:auto" onclick="updLocatif('${bien.id}','regime','${L.regime==='reel'?'micro':'reel'}')">Basculer</button></div>
+
+    <div class="grid g2 mb">
+      <div class="card card-p">
+        <div class="sec-title">⚖️ Micro-BIC vs Réel — année pleine <small>estimation</small></div>
+        <table class="tbl">
+          <tr><td>Loyers annuels HC</td><td class="tr-right num">${fmtEUR(f.loyerAn,0)}</td></tr>
+          <tr><td colspan="2" style="font-weight:700;background:#fafbfc">Micro-BIC</td></tr>
+          <tr><td style="padding-left:18px">Base imposable (50 %)</td><td class="tr-right num">${fmtEUR(f.baseMicro,0)}</td></tr>
+          <tr><td colspan="2" style="font-weight:700;background:#fafbfc">Réel simplifié</td></tr>
+          <tr><td style="padding-left:18px">− Charges d'exploitation</td><td class="tr-right num">${fmtEUR(f.charges,0)}</td></tr>
+          <tr><td style="padding-left:18px">− Intérêts + assurance emprunteur (an 1)</td><td class="tr-right num">${fmtEUR(f.interetsAn,0)}</td></tr>
+          <tr><td style="padding-left:18px">− Amortissements utilisables <span class="tt"><span class="tt-i">i</span><span class="tt-c">Art. 39C : l'amortissement ne peut pas créer de déficit. L'excédent part en stock différé, reportable sans limite.</span></span></td><td class="tr-right num">${fmtEUR(Math.min(am.total,Math.max(0,f.resReelAvantAm)),0)}</td></tr>
+          <tr><td style="padding-left:18px;font-weight:700">Base imposable réel</td><td class="tr-right num" style="font-weight:800;color:${f.baseReel===0?'var(--green)':'inherit'}">${fmtEUR(f.baseReel,0)} ${f.baseReel===0?'✓':''}</td></tr>
+          ${f.amortDiffere>0?`<tr><td style="padding-left:18px;color:var(--muted)">Stock amortissement différé (an 1)</td><td class="tr-right num" style="color:var(--muted)">${fmtEUR(f.amortDiffere,0)}</td></tr>`:''}
+        </table>
+        <div class="hero-banner ${f.eco>0?'hb-teal':'hb-amber'} mt" style="font-size:12.5px">
+          ${f.eco>0?`💰 Le réel économise <b>${fmtEUR(f.eco,0)}</b> de base imposable/an, soit ≈ <b>${fmtEUR(f.eco*(tmi+ps)/100,0)}</b> d'impôt (TMI ${tmi} % + PS 17,2 %).`:'Le micro-BIC est plus simple et suffisant dans ton cas actuel.'}
+        </div>
+        <div class="row mt" style="font-size:12px">
+          <label class="fl" style="margin:0">TMI du foyer</label>
+          <select onchange="APP.state.ui.tmi=parseFloat(this.value);saveLocal();renderAll()">${[0,11,30,41,45].map(x=>`<option value="${x}" ${tmi===x?'selected':''}>${x} %</option>`).join('')}</select>
+          <span style="color:var(--muted)">Impôt estimé : micro ${fmtEUR(impMicro,0)} · réel ${fmtEUR(impReel,0)}</span>
+        </div>
+      </div>
+      <div class="card card-p">
+        <div class="sec-title">📉 Plan d'amortissement <small>la "déco fiscale" du LMNP</small></div>
+        <div class="grid g2 mb">
+          <div><label class="fl">Bâti amortissable € <span class="tt"><span class="tt-i">i</span><span class="tt-c">Prix hors terrain (~85-90 % du prix). Le terrain ne s'amortit pas.</span></span></label><input type="number" value="${L.amort.bati}" onchange="updAmort('${bien.id}','bati',parseFloat(this.value))" style="width:100%"></div>
+          <div><label class="fl">Durée bâti (ans)</label><input type="number" value="${L.amort.durb}" onchange="updAmort('${bien.id}','durb',parseFloat(this.value))" style="width:100%"></div>
+          <div><label class="fl">Mobilier €</label><input type="number" value="${L.amort.mob}" onchange="updAmort('${bien.id}','mob',parseFloat(this.value))" style="width:100%"></div>
+          <div><label class="fl">Durée mobilier (ans)</label><input type="number" value="${L.amort.durm}" onchange="updAmort('${bien.id}','durm',parseFloat(this.value))" style="width:100%"></div>
+        </div>
+        <div style="max-height:230px;overflow-y:auto;border:1px solid var(--line);border-radius:10px">
+        <table class="tbl"><thead><tr><th>Exercice</th><th class="tr-right">Bâti</th><th class="tr-right">Mobilier</th><th class="tr-right">Total</th></tr></thead>
+        <tbody>${rows.join('')}</tbody></table></div>
+        <p style="font-size:11px;color:var(--muted);margin:8px 0 0">⚠️ LF 2025 : à la revente, les amortissements <b>déduits</b> sont réintégrés dans la plus-value imposable (hors stock différé non utilisé). Fais valider par un expert-comptable.</p>
+      </div>
+    </div>
+
+    <div class="grid g2">
+      <div class="card card-p">
+        <div class="sec-title">💼 Scénario revente</div>
+        <div class="grid g2 mb">
+          <div><label class="fl">Prix de revente estimé €</label><input type="number" value="${L.revente?.prix||0}" onchange="updRevente('${bien.id}','prix',parseFloat(this.value))" style="width:100%"></div>
+          <div><label class="fl">Horizon (années)</label><input type="number" value="${L.revente?.duree||10}" onchange="updRevente('${bien.id}','duree',parseFloat(this.value))" style="width:100%"></div>
+        </div>
+        <div id="reventeOut">${reventeHtml(bien)}</div>
+      </div>
+      <div class="card card-p">
+        <div class="sec-title">📆 Obligations fiscales LMNP</div>
+        ${[['Immatriculation INPI (P0i)','Dans les 15 jours du début d\'activité → SIRET'],
+           ['Option régime réel','Avant la date limite de la déclaration de revenus de la 1ʳᵉ année'],
+           ['Liasse fiscale 2031 + 2033','Chaque année vers mi-mai (EDI-TDFC via expert-comptable ou logiciel)'],
+           ['2042-C-PRO','Report du résultat BIC dans la déclaration de revenus (mai-juin)'],
+           ['CFE — 1447-C-SD','Déclaration initiale avant le 31/12 de la 1ʳᵉ année ; paiement le 15/12'],
+           ['Taxe foncière','Avis fin août, paiement mi-octobre']].map(x=>`
+        <div class="doc-item"><span>📌</span><div><b style="font-size:12.5px">${x[0]}</b><div style="font-size:11.5px;color:var(--muted)">${x[1]}</div></div></div>`).join('')}
+        <p style="font-size:11px;color:var(--muted);margin:8px 0 0">→ Les dates concrètes sont dans l'<b>Agenda</b> et modifiables.</p>
+      </div>
+    </div>`;
+}
+function updAmort(bienId,k,v){ const b=bienById(bienId); b.locatif.amort[k]=v||0; saveLocal(); renderAll(); }
+function updRevente(bienId,k,v){ const b=bienById(bienId); (b.locatif.revente=b.locatif.revente||{}).prix=b.locatif.revente.prix; b.locatif.revente[k]=v||0; saveLocal(); renderAll(); }
+function reventeHtml(bien){
+  const L=bien.locatif;
+  const prix=L.revente?.prix||0, duree=L.revente?.duree||10;
+  const achat=(bien.prixAchat||0)+(bien.fraisNotaire||0);
+  const pv=prix-achat;
+  const amortReintegres=Math.min(lmnpAmortAnnuel(bien,1).total*Math.min(duree,L.amort.durb||30), (L.amort.bati||0)+(L.amort.mob||0));
+  const pvFiscale=pv+((duree>0&&prix>0)?amortReintegres:0);
+  // abattements durée détention (IR : 6% /an de 6 à 21, 4% an 22 · PS : 1,65 % 6-21, 1,60 % 22, 9 % 23-30)
+  let abIR=0; for(let a=6;a<=Math.min(duree,21);a++) abIR+=6; if(duree>=22) abIR+=4; abIR=Math.min(100,abIR);
+  let abPS=0; for(let a=6;a<=Math.min(duree,21);a++) abPS+=1.65; if(duree>=22) abPS+=1.6; for(let a=23;a<=Math.min(duree,30);a++) abPS+=9; abPS=Math.min(100,abPS);
+  const impIR=Math.max(0,pvFiscale*(1-abIR/100))*0.19;
+  const impPS=Math.max(0,pvFiscale*(1-abPS/100))*0.172;
+  let crd=0; for(const p of bien.prets||[]){ const sched=pretSchedule(p); const k=Math.min(sched.length,duree*12); crd=k<sched.length?sched[k-1]?.crd??0:0; }
+  const netVendeur=prix-impIR-impPS-crd;
+  if(!prix) return '<div class="empty">Renseigne un prix de revente pour simuler</div>';
+  return `<table class="tbl">
+    <tr><td>Plus-value brute</td><td class="tr-right num" style="font-weight:600">${fmtEUR(pv,0)}</td></tr>
+    <tr><td>+ Amortissements réintégrés (LF 2025, estim.)</td><td class="tr-right num">${fmtEUR(amortReintegres,0)}</td></tr>
+    <tr><td>Abattement durée (IR ${abIR} % · PS ${abPS.toFixed(1)} %)</td><td class="tr-right num">après ${duree} ans</td></tr>
+    <tr><td>Impôt PV estimé (19 % + 17,2 %)</td><td class="tr-right num" style="color:var(--red)">${fmtEUR(impIR+impPS,0)}</td></tr>
+    <tr><td>CRD restant à solder</td><td class="tr-right num">${fmtEUR(crd,0)}</td></tr>
+    <tr><td style="font-weight:700">Net vendeur estimé</td><td class="tr-right num" style="font-weight:800;color:var(--teal)">${fmtEUR(netVendeur,0)}</td></tr>
+  </table>
+  <p style="font-size:10.5px;color:var(--muted);margin:6px 0 0">Ordre de grandeur indicatif — la fiscalité des plus-values LMNP a évolué (LF 2025) : à valider avec un professionnel avant décision.</p>`;
+}
+// =====================================================================
+// DOCUMENTS DU BIEN
+// =====================================================================
+async function renderBienDocs(c,bien){
+  if(!APP.state.coffreCats[bien.id]){ APP.state.coffreCats[bien.id]=defaultCoffreCats(); saveLocal(); }
+  const cats=APP.state.coffreCats[bien.id];
+  const docs=(await dbGetAllDocs()).filter(d=>d.bienId===bien.id);
+  c.innerHTML=`
+    <div class="spread mb">
+      <div class="sec-title" style="margin:0">📁 Documents — ${esc(bien.label)} <span class="badge b-grey">${docs.length}</span></div>
+      <div class="row">
+        <button class="btn btn-sm" onclick="addCatModal('${bien.id}')">＋ Catégorie</button>
+        <button class="btn btn-sm btn-p" onclick="uploadDocModal()">📤 Ajouter</button>
+      </div>
+    </div>
+    ${cats.map(cat=>{
+      const cDocs=docs.filter(d=>d.categorieId===cat.id);
+      return `<details class="acc" ${cDocs.length?'open':''}>
+        <summary><span class="arr">▶</span> ${cat.icon} ${esc(cat.label)} <span class="badge b-grey">${cDocs.length}</span>
+        <span style="margin-left:auto" onclick="event.preventDefault();event.stopPropagation()">
+          <button class="btn btn-icon" onclick="renameCatModal('${bien.id}','${cat.id}')">✎</button>
+          <button class="btn btn-icon btn-danger" onclick="delCat('${bien.id}','${cat.id}')">🗑️</button></span></summary>
+        <div class="mt">
+          ${cDocs.map(d=>`<div class="doc-item"><span style="font-size:16px">${getDocIcon(d.mimeType)}</span>
+            <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.filename)}</div>
+            <div style="font-size:10.5px;color:var(--muted)">${fmtSize(d.size)} · ajouté le ${fmtDate(d.uploadedAt)}</div></div>
+            <button class="btn btn-icon" onclick="viewDoc(${d.id})">👁️</button>
+            <button class="btn btn-icon" onclick="moveDocModal(${d.id})">📂</button>
+            <button class="btn btn-icon btn-danger" onclick="deleteDocument(${d.id})">🗑️</button></div>`).join('')
+          ||'<div style="font-size:12px;color:var(--faint);font-style:italic;padding:4px 0">Aucun document</div>'}
+        </div>
+      </details>`;
+    }).join('')}`;
+}
+function addCatModal(bienId){
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:12px">＋ Nouvelle catégorie</h3>
+    <div class="grid g2 mb">
+      <div><label class="fl">Icône (emoji)</label><input id="nc_icon" value="📁" style="width:100%"></div>
+      <div><label class="fl">Nom</label><input id="nc_label" placeholder="Ma catégorie" style="width:100%"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Annuler</button>
+    <button class="btn btn-p" onclick="confirmAddCat('${bienId}')">Créer</button></div>`);
+}
+function confirmAddCat(bienId){
+  const label=document.getElementById('nc_label').value;
+  if(!label){ toast('Donne un nom','error'); return; }
+  APP.state.coffreCats[bienId].push({id:uid('cat'),label,icon:document.getElementById('nc_icon').value||'📁'});
+  saveLocal(); closeModal(); renderAll();
+}
+function renameCatModal(bienId,catId){
+  const cat=APP.state.coffreCats[bienId].find(x=>x.id===catId);
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:12px">Renommer</h3>
+    <div class="grid g2 mb">
+      <div><label class="fl">Icône</label><input id="rc_icon" value="${esc(cat.icon)}" style="width:100%"></div>
+      <div><label class="fl">Nom</label><input id="rc_label" value="${esc(cat.label)}" style="width:100%"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Annuler</button>
+    <button class="btn btn-p" onclick="confirmRenameCat('${bienId}','${catId}')">Enregistrer</button></div>`);
+}
+function confirmRenameCat(bienId,catId){
+  const cat=APP.state.coffreCats[bienId].find(x=>x.id===catId);
+  cat.icon=document.getElementById('rc_icon').value;
+  cat.label=document.getElementById('rc_label').value;
+  saveLocal(); closeModal(); renderAll();
+}
+async function delCat(bienId,catId){
+  const docs=(await dbGetAllDocs()).filter(d=>d.bienId===bienId&&d.categorieId===catId);
+  if(docs.length){ toast('Catégorie non vide : déplace d\'abord les documents','error'); return; }
+  if(!await confirmModal({title:'Supprimer la catégorie ?',body:'Elle est vide, aucun document perdu.'})) return;
+  APP.state.coffreCats[bienId]=APP.state.coffreCats[bienId].filter(c=>c.id!==catId);
+  saveLocal(); renderAll();
+}
+async function moveDocModal(docId){
+  const d=await dbGetDoc(docId);
+  const cats=APP.state.coffreCats[d.bienId]||[];
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:6px">📂 Déplacer</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">${esc(d.filename)}</p>
+    <div class="mb"><label class="fl">Catégorie</label><select id="mv_cat" style="width:100%">
+      ${cats.map(c=>`<option value="${c.id}" ${c.id===d.categorieId?'selected':''}>${c.icon} ${esc(c.label)}</option>`).join('')}</select></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Annuler</button>
+    <button class="btn btn-p" onclick="confirmMoveDoc(${docId})">Déplacer</button></div>`);
+}
+async function confirmMoveDoc(docId){
+  const d=await dbGetDoc(docId);
+  d.categorieId=document.getElementById('mv_cat').value;
+  await dbPutDoc(d);
+  closeModal(); renderAll(); toast('Déplacé ✓');
+}
+// =====================================================================
+// AGENDA
+// =====================================================================
+const AGENDA_TYPES={fiscal:['📊','b-red','Fiscal'],copro:['🏢','b-blue','Copro'],credit:['💳','b-amber','Crédit'],assurance:['🛡️','b-violet','Assurance'],perso:['📌','b-grey','Autre'],acte:['✍️','b-teal','Acte']};
+function agendaAVenir(days){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const max=new Date(now.getTime()+days*86400000);
+  return (APP.state.agenda||[]).filter(a=>!a.done&&new Date(a.date)<=max).sort((a,b)=>new Date(a.date)-new Date(b.date));
+}
+function agendaItemHtml(a){
+  const d=new Date(a.date);
+  const late=d<new Date(new Date().toDateString());
+  const t=AGENDA_TYPES[a.type]||AGENDA_TYPES.perso;
+  const bien=a.bienId?bienById(a.bienId):null;
+  return `<div class="agenda-item" style="${a.done?'opacity:.5':''}">
+    <div class="agenda-date"><div class="d" style="color:${late&&!a.done?'var(--red)':'var(--teal)'}">${d.getDate()}</div><div class="m">${MONTHS_FR[d.getMonth()]} ${d.getFullYear()!==new Date().getFullYear()?d.getFullYear():''}</div></div>
+    <div style="flex:1">
+      <div style="font-weight:600;font-size:13px">${t[0]} ${esc(a.titre)} ${late&&!a.done?'<span class="badge b-red">en retard</span>':''}</div>
+      <div style="font-size:11.5px;color:var(--muted)">${bien?esc(bien.label)+' · ':''}${esc(a.note||'')}</div>
+    </div>
+    <span class="badge ${t[1]}">${t[2]}</span>
+    <button class="btn btn-icon" title="${a.done?'Réouvrir':'Marquer fait'}" onclick="toggleAgenda('${a.id}')">${a.done?'↩️':'✓'}</button>
+    <button class="btn btn-icon" onclick="openAgendaModal('${a.id}')">✎</button>
+  </div>`;
+}
+function renderAgenda(root){
+  const items=[...(APP.state.agenda||[])].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const upcoming=items.filter(a=>!a.done);
+  const done=items.filter(a=>a.done);
+  root.innerHTML=`
+  <div class="page active">
+    <div class="spread mb">
+      <div><h1 style="font-size:22px;font-weight:800">🗓️ Agenda</h1>
+      <div style="font-size:13px;color:var(--muted);margin-top:3px">Échéances fiscales, copro, crédits — tous biens</div></div>
+      <button class="btn btn-p" onclick="openAgendaModal()">＋ Échéance</button>
+    </div>
+    <div class="card card-p mb">
+      ${upcoming.length?upcoming.map(agendaItemHtml).join(''):'<div class="empty"><div class="big">🎉</div>Aucune échéance en attente</div>'}
+    </div>
+    ${done.length?`<details class="acc"><summary><span class="arr">▶</span> Terminées <span class="badge b-grey">${done.length}</span></summary><div class="mt">${done.map(agendaItemHtml).join('')}</div></details>`:''}
+  </div>`;
+}
+function toggleAgenda(id){
+  const a=APP.state.agenda.find(x=>x.id===id); if(!a) return;
+  a.done=!a.done;
+  if(a.done&&a.recurrence==='annuel'){
+    const d=new Date(a.date); d.setFullYear(d.getFullYear()+1);
+    APP.state.agenda.push({...a,id:uid('ag'),date:d.toISOString().slice(0,10),done:false});
+    toast('Fait ✓ — occurrence '+d.getFullYear()+' créée');
+  }
+  saveLocal(); renderAll();
+}
+function openAgendaModal(id){
+  const a=id?APP.state.agenda.find(x=>x.id===id):{titre:'',date:new Date().toISOString().slice(0,10),type:'perso',bienId:'',note:'',recurrence:''};
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:12px">${id?'Éditer':'Nouvelle'} échéance</h3>
+    <div class="grid g2 mb">
+      <div style="grid-column:1/-1"><label class="fl">Titre</label><input id="ag_titre" value="${esc(a.titre)}" style="width:100%"></div>
+      <div><label class="fl">Date</label><input id="ag_date" type="date" value="${a.date}" style="width:100%"></div>
+      <div><label class="fl">Type</label><select id="ag_type" style="width:100%">${Object.entries(AGENDA_TYPES).map(([k,v])=>`<option value="${k}" ${a.type===k?'selected':''}>${v[0]} ${v[2]}</option>`).join('')}</select></div>
+      <div><label class="fl">Bien concerné</label><select id="ag_bien" style="width:100%"><option value="">—</option>${APP.state.biens.map(b=>`<option value="${b.id}" ${a.bienId===b.id?'selected':''}>${esc(b.label)}</option>`).join('')}</select></div>
+      <div><label class="fl">Récurrence</label><select id="ag_rec" style="width:100%"><option value="">Ponctuelle</option><option value="annuel" ${a.recurrence==='annuel'?'selected':''}>Annuelle</option></select></div>
+      <div style="grid-column:1/-1"><label class="fl">Note</label><input id="ag_note" value="${esc(a.note||'')}" style="width:100%"></div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      ${id?`<button class="btn btn-danger btn-sm" onclick="delAgenda('${id}')">🗑️</button>`:'<span></span>'}
+      <div class="row"><button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-p" onclick="saveAgenda('${id||''}')">Enregistrer</button></div>
+    </div>`);
+}
+function saveAgenda(id){
+  const g=x=>document.getElementById(x).value;
+  const obj={titre:g('ag_titre'),date:g('ag_date'),type:g('ag_type'),bienId:g('ag_bien'),note:g('ag_note'),recurrence:g('ag_rec')};
+  if(id){ Object.assign(APP.state.agenda.find(x=>x.id===id),obj); }
+  else APP.state.agenda.push({id:uid('ag'),done:false,...obj});
+  saveLocal(); closeModal(); renderAll(); toast('Échéance enregistrée ✓');
+}
+async function delAgenda(id){
+  APP.state.agenda=APP.state.agenda.filter(x=>x.id!==id);
+  saveLocal(); closeModal(); renderAll();
+}
+
+// =====================================================================
+// COFFRE DOCUMENTS
+// =====================================================================
+function defaultCoffreCats(){
+  return [
+    {id:uid('cat'),label:'Acquisition & notaire',icon:'🏛️'},
+    {id:uid('cat'),label:'Crédits & assurances',icon:'💳'},
+    {id:uid('cat'),label:'Travaux & devis',icon:'🛠️'},
+    {id:uid('cat'),label:'Copropriété',icon:'🏢'},
+    {id:uid('cat'),label:'Charges & factures',icon:'🧾'},
+    {id:uid('cat'),label:'Fiscalité',icon:'📊'},
+    {id:uid('cat'),label:'Location',icon:'🔑'},
+    {id:uid('cat'),label:'Divers',icon:'📌'}
+  ];
+}
+function getDocIcon(m){ if(!m) return '📄'; if(m.includes('pdf')) return '📕'; if(m.includes('image')) return '🖼️'; if(m.includes('word')) return '📘'; if(m.includes('sheet')||m.includes('excel')) return '📗'; return '📄'; }
+function fmtSize(b){ if(!b) return '0 B'; const k=1024,s=['B','KB','MB','GB'],i=Math.floor(Math.log(b)/Math.log(k)); return (b/Math.pow(k,i)).toFixed(1)+' '+s[i]; }
+
+async function renderCoffre(root){
+  const docs=await dbGetAllDocs();
+  root.innerHTML=`
+  <div class="page active">
+    <div class="spread mb">
+      <div><h1 style="font-size:22px;font-weight:800">📁 Coffre documentaire</h1>
+      <div style="font-size:13px;color:var(--muted);margin-top:3px">${docs.length} document(s) · stockés en local dans ce navigateur · inclus dans l'export complet</div></div>
+      <button class="btn btn-p" onclick="uploadDocModal()">📤 Ajouter un document</button>
+    </div>
+    <div class="hero-banner hb-amber mb" style="font-size:12px">⚠️ Les documents restent <b>dans ce navigateur</b> (pas synchronisés sur GitHub pour ne pas alourdir le repo). Pense à l'<b>export complet</b> (Réglages) pour les sauvegarder, ou garde les originaux sur OneDrive.</div>
+    ${APP.state.biens.map(b=>{
+      const bDocs=docs.filter(d=>d.bienId===b.id);
+      const cats=APP.state.coffreCats[b.id]||[];
+      return `<details class="acc" ${bDocs.length?'open':''}><summary><span class="arr">▶</span> ${BIEN_ICONS[b.type]} ${esc(b.label)} <span class="badge b-grey">${bDocs.length}</span></summary>
+      <div class="mt grid g2">
+        ${cats.map(cat=>{
+          const cDocs=bDocs.filter(d=>d.categorieId===cat.id);
+          return `<div class="card card-p" style="box-shadow:none">
+            <div class="spread mb"><div style="font-weight:600;font-size:13px">${cat.icon} ${esc(cat.label)}</div><span class="badge b-grey">${cDocs.length}</span></div>
+            ${cDocs.map(d=>`<div class="doc-item"><span>${getDocIcon(d.mimeType)}</span>
+              <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.filename)}</div>
+              <div style="font-size:10.5px;color:var(--muted)">${fmtSize(d.size)} · ${fmtDate(d.uploadedAt)}</div></div>
+              <button class="btn btn-icon" onclick="viewDoc(${d.id})">👁️</button>
+              <button class="btn btn-icon btn-danger" onclick="deleteDocument(${d.id})">🗑️</button></div>`).join('')||'<div style="font-size:11.5px;color:var(--faint);font-style:italic">Vide</div>'}
+          </div>`;
+        }).join('')}
+      </div></details>`;
+    }).join('')||'<div class="empty">Ajoute d\'abord un bien</div>'}
+  </div>`;
+}
+function uploadDocModal(){
+  const biens=APP.state.biens;
+  if(!biens.length){ toast('Ajoute d\'abord un bien','error'); return; }
+  const catOpts=bid=>((APP.state.coffreCats[bid])||[]).map(c=>`<option value="${c.id}">${c.icon} ${esc(c.label)}</option>`).join('');
+  genericModal(`
+    <h3 style="font-size:16px;margin-bottom:12px">📤 Ajouter un document</h3>
+    <div class="mb"><label class="fl">Bien</label><select id="up_bien" style="width:100%" onchange="document.getElementById('up_cat').innerHTML=(APP.state.coffreCats[this.value]||[]).map(c=>'<option value=&quot;'+c.id+'&quot;>'+c.icon+' '+c.label+'</option>').join('')">${biens.map(b=>`<option value="${b.id}">${esc(b.label)}</option>`).join('')}</select></div>
+    <div class="mb"><label class="fl">Catégorie</label><select id="up_cat" style="width:100%">${catOpts(biens[0].id)}</select></div>
+    <div class="mb"><label class="fl">Fichier</label><input id="up_file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.heic" style="width:100%">
+    <p style="font-size:10.5px;color:var(--muted);margin:4px 0 0">Stockage local (IndexedDB) — jamais envoyé sur un serveur.</p></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Annuler</button>
+    <button class="btn btn-p" onclick="confirmUpload()">Ajouter</button></div>`);
+}
+async function confirmUpload(){
+  const file=document.getElementById('up_file').files[0];
+  if(!file){ toast('Choisis un fichier','error'); return; }
+  const buf=await file.arrayBuffer();
+  await dbAddDoc({bienId:document.getElementById('up_bien').value,categorieId:document.getElementById('up_cat').value,
+    filename:file.name,mimeType:file.type,size:file.size,data:buf,uploadedAt:new Date().toISOString()});
+  closeModal(); toast('Document ajouté ✓'); renderAll();
+}
+async function viewDoc(id){
+  const d=await dbGetDoc(id); if(!d){ toast('Introuvable','error'); return; }
+  const url=URL.createObjectURL(new Blob([d.data],{type:d.mimeType}));
+  window.open(url,'_blank');
+}
+async function deleteDocument(id){
+  if(!await confirmModal({title:'Supprimer ce document ?',body:'Suppression définitive du coffre local.'})) return;
+  await dbDelDoc(id); toast('Supprimé'); renderAll();
+}
+
+// =====================================================================
+// RÉGLAGES
+// =====================================================================
+function renderReglages(root){
+  const s=APP.state.sync;
+  root.innerHTML=`
+  <div class="page active">
+    <h1 style="font-size:22px;font-weight:800;margin-bottom:18px">⚙️ Réglages</h1>
+
+    <div class="card card-p mb">
+      <div class="sec-title">☁️ Synchronisation GitHub <small>vos données dans un repo privé, accessibles partout</small></div>
+      <div class="grid g2 mb">
+        <div><label class="fl">Repo données (privé) — owner/nom</label><input id="st_repo" placeholder="armand-luciano/patrimoine-data" value="${esc(s.repo)}" style="width:100%"></div>
+        <div><label class="fl">Branche</label><input id="st_branch" value="${esc(s.branch||'main')}" style="width:100%"></div>
+        <div style="grid-column:1/-1"><label class="fl">Token GitHub (fine-grained, accès Contents RW sur ce repo uniquement)</label>
+        <input id="st_token" type="password" placeholder="${ghToken()?'••••••••••••  (déjà enregistré)':'github_pat_…'}" style="width:100%">
+        <p style="font-size:10.5px;color:var(--muted);margin:4px 0 0">Le token reste dans CE navigateur (localStorage) — il n'est jamais écrit dans data.json ni commité.</p></div>
+      </div>
+      <div class="row mb">
+        <label style="font-size:12.5px;display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" ${s.auto?'checked':''} onchange="APP.state.sync.auto=this.checked;saveLocal()"> Sauvegarde auto sur GitHub après chaque modification</label>
+      </div>
+      <div class="row">
+        <button class="btn btn-p" onclick="saveSyncSettings()">Enregistrer la config</button>
+        <button class="btn" onclick="testSync()">🔌 Tester la connexion</button>
+        <button class="btn" onclick="doPull()">⬇️ Pull (charger depuis GitHub)</button>
+        <button class="btn" onclick="ghPush()">⬆️ Push (sauvegarder maintenant)</button>
+      </div>
+    </div>
+
+    <div class="card card-p mb">
+      <div class="sec-title">💾 Export / Import</div>
+      <div class="row">
+        <button class="btn" onclick="exportDataJson()">📄 Exporter data.json (données seules)</button>
+        <button class="btn" onclick="exportFull()">📦 Export complet (données + documents)</button>
+        <button class="btn" onclick="document.getElementById('fileImport').click()">📂 Importer un fichier</button>
+        <input id="fileImport" type="file" accept=".json" style="display:none" onchange="if(this.files[0])importFile(this.files[0]);this.value=''">
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);margin:10px 0 0">💡 <b>data.json</b> = le fichier à committer dans ton repo privé. <b>Export complet</b> = sauvegarde de secours avec les documents du coffre.</p>
+    </div>
+
+    <div class="card card-p mb">
+      <div class="sec-title">👥 Le couple</div>
+      <div class="grid g2 mb">
+        <div><label class="fl">Personne 1</label><input id="cp_p1" value="${esc(P1().nom)}" style="width:100%"></div>
+        <div><label class="fl">Personne 2</label><input id="cp_p2" value="${esc(P2().nom)}" style="width:100%"></div>
+        <div><label class="fl">Couleur P1</label><input id="cp_c1" type="color" value="${P1().couleur}" style="width:100%;height:36px"></div>
+        <div><label class="fl">Couleur P2</label><input id="cp_c2" type="color" value="${P2().couleur}" style="width:100%;height:36px"></div>
+      </div>
+      <button class="btn btn-p" onclick="saveCouple()">Enregistrer</button>
+    </div>
+
+    <div class="card card-p">
+      <div class="sec-title" style="color:var(--red)">⚠️ Zone dangereuse</div>
+      <button class="btn btn-danger" onclick="resetAll()">Réinitialiser toutes les données locales</button>
+    </div>
+  </div>`;
+}
+function saveSyncSettings(){
+  APP.state.sync.repo=document.getElementById('st_repo').value.trim().replace(/^https:\/\/github\.com\//,'').replace(/\/$/,'');
+  APP.state.sync.branch=document.getElementById('st_branch').value.trim()||'main';
+  const t=document.getElementById('st_token').value.trim();
+  if(t) setGhToken(t);
+  APP.ghSha=null;
+  saveLocal(); refreshSyncPill(); toast('Config enregistrée ✓');
+}
+async function testSync(){
+  saveSyncSettings();
+  if(!ghConfigured()){ toast('Renseigne repo + token','error'); return; }
+  refreshSyncPill('sync');
+  try{
+    const r=await fetch('https://api.github.com/repos/'+APP.state.sync.repo,{headers:ghHeaders()});
+    if(!r.ok) throw new Error(r.status===404?'Repo introuvable (ou token sans accès)':'Erreur '+r.status);
+    const j=await r.json();
+    toast('✓ Connecté à '+j.full_name+(j.private?' (privé ✓)':' ⚠️ REPO PUBLIC !'), j.private?'ok':'error');
+  }catch(e){ toast(e.message,'error'); }
+  refreshSyncPill();
+}
+async function doPull(){
+  const remote=await ghPull();
+  if(!remote) return;
+  const ok=await confirmModal({title:'Charger les données GitHub ?',
+    body:'Version distante : <b>'+new Date(remote.updatedAt).toLocaleString('fr-FR')+'</b><br>Version locale : <b>'+new Date(APP.state.updatedAt).toLocaleString('fr-FR')+'</b><br><br>Les données locales seront remplacées.'});
+  if(!ok) return;
+  const sync=APP.state.sync;
+  APP.state=remote; APP.state.sync=sync;
+  localStorage.setItem(APP.LS_KEY,JSON.stringify(APP.state));
+  APP.dirty=false;
+  renderAll(); toast('Données GitHub chargées ✓');
+}
+function exportDataJson(){
+  const blob=new Blob([JSON.stringify(APP.state,null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='data.json'; a.click();
+  URL.revokeObjectURL(a.href);
+  toast('data.json téléchargé ✓');
+}
+function saveCouple(){
+  P1().nom=document.getElementById('cp_p1').value;
+  P2().nom=document.getElementById('cp_p2').value;
+  P1().couleur=document.getElementById('cp_c1').value;
+  P2().couleur=document.getElementById('cp_c2').value;
+  saveLocal(); renderAll(); toast('Enregistré ✓');
+}
+async function resetAll(){
+  const ok=await confirmModal({title:'Tout réinitialiser ?',body:'<b>Toutes les données locales</b> (état + réglages) seront effacées. Les documents du coffre et le data.json sur GitHub ne sont pas touchés.',okLabel:'Réinitialiser'});
+  if(!ok) return;
+  localStorage.removeItem(APP.LS_KEY);
+  location.reload();
+}
+
+// =====================================================================
+// INIT
+// =====================================================================
+document.addEventListener('DOMContentLoaded', async ()=>{
+  await openDB();
+  loadLocal();
+  // Tentative de chargement d'un data.json posé à côté du fichier (marche en http/https, pas en file://)
+  if(!APP.state.biens.length && location.protocol.startsWith('http')){
+    try{
+      const r=await fetch('data.json',{cache:'no-store'});
+      if(r.ok){ const j=await r.json(); if(j.biens){ APP.state=migrate(j); saveLocal(); toast('data.json local chargé ✓'); } }
+    }catch(e){}
+  }
+  renderAll();
+  ghSyncOnLoad();
+});
+</script>
+</html>
