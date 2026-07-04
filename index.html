@@ -316,7 +316,7 @@ function saveLocal(){
 function markDirty(){
   APP.dirty = true;
   refreshSyncPill();
-  if(APP.state.sync?.auto && ghToken() && APP.state.sync.repo){
+  if(APP.state.sync?.auto && APP._syncedOnce && ghToken() && APP.state.sync.repo){
     clearTimeout(APP.autoSyncTimer);
     APP.autoSyncTimer = setTimeout(()=>ghPush(true), 4000);
   }
@@ -360,7 +360,7 @@ async function ghPull(silent=false){
     if(r.status===404){ if(!silent) toast('data.json introuvable dans le repo — fais un premier Push','error'); return null; }
     if(!r.ok) throw new Error('GitHub '+r.status);
     const j = await r.json();
-    APP.ghSha = j.sha;
+    APP.ghSha = j.sha; APP._syncedOnce = true;
     const remote = migrate(JSON.parse(b64decode(j.content)));
     return remote;
   }catch(e){
@@ -385,7 +385,7 @@ async function ghPush(silent=false){
     const r = await fetch(ghUrl(), {method:'PUT',headers:{...ghHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!r.ok){ const t=await r.text(); throw new Error(r.status+' '+t.slice(0,120)); }
     const j = await r.json();
-    APP.ghSha = j.content.sha;
+    APP.ghSha = j.content.sha; APP._syncedOnce = true;
     APP.dirty = false;
     refreshSyncPill();
     if(!silent) toast('Sauvegardé sur GitHub ✓');
